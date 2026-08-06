@@ -1,0 +1,147 @@
+// ══════════════════════════════════════════════════════════════
+//  Mess Manager SaaS — Multi-tenant database schema
+//  Every business table carries orgId so one Postgres database
+//  safely serves many mess-owner customers (tenants of the SaaS).
+// ══════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Organization = one mess-owner's business (the SaaS "tenant") ──
+model Organization {
+  id              String   @id @default(cuid())
+  name            String   // e.g. "Advocate House Mess"
+  ownerName       String
+  ownerPhone      String   @unique
+  createdAt       DateTime @default(now())
+
+  // Subscription / billing state
+  plan            String   @default("trial")   // trial | monthly | yearly
+  status          String   @default("trial")   // trial | active | expired | suspended
+  trialEndsAt     DateTime
+  subscriptionEndsAt DateTime?
+  maxFlats        Int      @default(3)          // plan limit, super-admin can raise it
+
+  users           User[]
+  flats           Flat[]
+  tenants         Tenant[]
+  rentPayments    RentPayment[]
+  svcPayments     ServiceCharge[]
+  advPayments     AdvancePayment[]
+  expenses        Expense[]
+  paymentSubmissions PaymentSubmission[]
+}
+
+// ── Users belong to exactly one org (mess staff), except SuperAdmin ──
+model User {
+  id        String   @id @default(cuid())
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id])
+  name      String
+  phone     String   @unique
+  pinHash   String
+  role      String   @default("Admin") // SuperAdmin | Owner | Admin | Management
+  createdAt DateTime @default(now())
+}
+
+model Flat {
+  id         String   @id @default(cuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id])
+  name       String
+  address    String?
+  totalSeats Int      @default(0)
+  flatRent   Float    @default(0)
+  ownerName  String?
+  notes      String?
+  tenants    Tenant[]
+  createdAt  DateTime @default(now())
+}
+
+model Tenant {
+  id             String   @id @default(cuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id])
+  flatId         String?
+  flat           Flat?    @relation(fields: [flatId], references: [id])
+  name           String
+  room           String?
+  phone          String?
+  rent           Float    @default(0)
+  serviceCharge  Float    @default(0)
+  advanceDue     Float    @default(0)
+  entryDate      DateTime?
+  leftDate       DateTime?
+  status         String   @default("Active") // Active | Inactive | Left
+  rentPayments   RentPayment[]
+  svcPayments    ServiceCharge[]
+  advPayments    AdvancePayment[]
+  createdAt      DateTime @default(now())
+}
+
+model RentPayment {
+  id      String   @id @default(cuid())
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  tenantId String
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  flatId  String?
+  month   String
+  year    Int
+  paid    Float
+  date    DateTime @default(now())
+}
+
+model ServiceCharge {
+  id       String  @id @default(cuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id])
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  month    String
+  year     Int
+  paid     Float
+  date     DateTime @default(now())
+}
+
+model AdvancePayment {
+  id       String  @id @default(cuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id])
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  paid     Float
+  date     DateTime @default(now())
+}
+
+model Expense {
+  id       String  @id @default(cuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id])
+  title    String
+  amount   Float
+  source   String?  // "Service Charge" | "General" ...
+  date     DateTime @default(now())
+}
+
+// ── Manual bKash/Nagad payment submissions (owner submits, you verify) ──
+model PaymentSubmission {
+  id           String   @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id])
+  method       String   // bKash | Nagad
+  senderNumber String
+  trxId        String
+  amount       Float
+  planApplied  String   // monthly | yearly
+  status       String   @default("pending") // pending | approved | rejected
+  note         String?
+  submittedAt  DateTime @default(now())
+  reviewedAt   DateTime?
+}
