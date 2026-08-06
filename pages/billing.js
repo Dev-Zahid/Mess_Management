@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { requireOrgUser } from '../lib/guard';
 import { PLANS, PAYMENT_NUMBERS } from '../lib/plans';
+import Layout from '../components/Layout';
 
 export async function getServerSideProps({ req }) {
   const result = await requireOrgUser(req);
   if (result.redirect) return result;
-  const { org, status } = result;
+  const { org, user, status } = result;
 
   const daysLeft =
     status === 'trial'
@@ -14,10 +15,16 @@ export async function getServerSideProps({ req }) {
       ? Math.max(0, Math.ceil((new Date(org.subscriptionEndsAt) - new Date()) / 86400000))
       : 0;
 
-  return { props: { orgId: org.id, status, daysLeft } };
+  return {
+    props: {
+      status,
+      daysLeft,
+      layoutProps: { orgName: org.name, userName: user.name, status: null, daysLeft: null },
+    },
+  };
 }
 
-export default function Billing({ orgId, status, daysLeft, locked }) {
+export default function Billing({ status, daysLeft, layoutProps }) {
   const [method, setMethod] = useState('bKash');
   const [plan, setPlan] = useState('monthly');
   const [senderNumber, setSenderNumber] = useState('');
@@ -54,13 +61,13 @@ export default function Billing({ orgId, status, daysLeft, locked }) {
   }
 
   return (
-    <div className="app-shell">
-      <main className="app-main" style={{ maxWidth: 640, margin: '0 auto' }}>
+    <Layout {...layoutProps}>
+      <div style={{ maxWidth: 640 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>বিলিং ও সাবস্ক্রিপশন</h1>
 
         {status === 'expired' && (
           <div className="alert alert-error">
-            আপনার {status === 'expired' ? 'ট্রায়াল/সাবস্ক্রিপশন' : ''} শেষ হয়ে গেছে। নিচে পেমেন্ট সাবমিট করে আবার অ্যাক্টিভ করুন।
+            আপনার ট্রায়াল/সাবস্ক্রিপশন শেষ হয়ে গেছে। নিচে পেমেন্ট সাবমিট করে আবার অ্যাক্টিভ করুন।
           </div>
         )}
         {status === 'trial' && (
@@ -135,7 +142,7 @@ export default function Billing({ orgId, status, daysLeft, locked }) {
             </button>
           </form>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 }

@@ -1,18 +1,28 @@
-# Mess Manager — SaaS (Phase 1)
+z# Mess Manager — SaaS (Phase 1 + Phase 2)
 
-মেস/হোস্টেল মালিকদের কাছে বেচার জন্য multi-tenant SaaS-এর ভিত্তি (foundation)। এই ধাপে যা কাজ করছে:
+মেস/হোস্টেল মালিকদের কাছে বেচার জন্য multi-tenant SaaS। এই ধাপে যা কাজ করছে:
 
-- ল্যান্ডিং পেজ (`/`)
-- সাইনআপ (৭ দিন ফ্রি ট্রায়াল অটো শুরু হয়) (`/signup`)
-- লগইন (ফোন + PIN) (`/login`)
-- ড্যাশবোর্ড শেল + ট্রায়াল কাউন্টডাউন ব্যানার (`/dashboard`)
-- বিলিং পেজ — bKash/Nagad ম্যানুয়াল পেমেন্ট সাবমিশন (`/billing`)
-- Super Admin প্যানেল — সব কাস্টমার দেখা, পেমেন্ট approve/reject করা (`/admin`)
-- Terms ও Privacy পেজ
+**Phase 1 (আগের ধাপ):**
+- ল্যান্ডিং পেজ, সাইনআপ (৭ দিন ফ্রি ট্রায়াল), লগইন
+- বিলিং পেজ — bKash/Nagad ম্যানুয়াল পেমেন্ট সাবমিশন
+- Super Admin প্যানেল — কাস্টমার ও পেমেন্ট approve/reject
+- Terms/Privacy পেজ
 
-**যা এখনো বাকি (পরের ধাপ):** Flats/Tenants/Rent Payments/Service Charge/Advance Money/Due Tracker/Expenses/Owner
-Panel — এগুলো তোমার আগের Google Apps Script অ্যাপ থেকে পোর্ট করে `/dashboard` এর ভেতরে বসাতে হবে। কাঠামো
-(database schema, multi-tenancy, auth) সব রেডি, বাকিটা page-by-page যোগ করা।
+**Phase 2 (এই ধাপে নতুন যোগ হলো):**
+- **Flats** — ফ্ল্যাট যোগ/মুছুন, সিট সংখ্যা, ভাড়া
+- **Tenants** — টেনেন্ট যোগ, ফ্ল্যাটে অ্যাসাইন, Active/Inactive/Left স্ট্যাটাস
+- **Rent Payments** — মাস অনুযায়ী পেমেন্ট রেকর্ড, **carry-forward calculation** (আগের GAS
+  অ্যাপের `calcCarryFwd` লজিক হুবহু পোর্ট করা হয়েছে — কেউ বেশি পেমেন্ট করলে পরের মাসে credit হিসেবে যোগ হয়)
+- **Service Charge** — মাসওয়ারি সার্ভিস চার্জ পেমেন্ট ট্র্যাকিং
+- **Advance Money** — টার্গেট বনাম কালেক্টেড ট্র্যাকিং
+- **Due Tracker** — সব টেনেন্টের রেন্ট + সার্ভিস চার্জ বকেয়া এক জায়গায়
+- **Expenses** — খরচ যোগ/মুছুন, উৎস অনুযায়ী ট্যাগ
+- **Owner Panel** — এখনো "শীঘ্রই আসছে" (owner payments/advances/investments — এই তিনটা concept আগের
+  Code.gs-এ ছিল কিন্তু এখনো নতুন schema-তে মডেল করা হয়নি, সততার সাথে এটা placeholder রাখা হয়েছে)
+
+**মাল্টি-টেনেন্সি:** প্রতিটা API route session থেকে `orgId` নিয়ে সব query filter করে — একজন owner
+কখনো আরেকজনের ডেটা দেখতে/এডিট করতে পারবে না। প্রতিটা `[id].js` route মিউটেশনের আগে
+`findFirst({ id, orgId })` দিয়ে ownership যাচাই করে।
 
 ---
 
@@ -28,42 +38,33 @@ Panel — এগুলো তোমার আগের Google Apps Script অ্
 cp .env.example .env
 # .env ফাইলে DATABASE_URL, JWT_SECRET, SUPERADMIN_PHONE, SUPERADMIN_PIN বসান
 npm install
-npm run db:push      # ডেটাবেসে টেবিল তৈরি করবে
-npm run db:seed       # আপনার Super Admin লগইন তৈরি করবে
+npm run db:push      # ডেটাবেসে নতুন টেবিলগুলো (Flat, Tenant, RentPayment...) তৈরি/আপডেট করবে
+npm run db:seed       # আপনার Super Admin লগইন তৈরি করবে (যদি আগে না করে থাকেন)
 npm run dev            # http://localhost:3000
 ```
+আগে থেকে ডেপ্লয় করা থাকলে শুধু `npm run db:push` চালালেই নতুন টেবিলগুলো যোগ হয়ে যাবে — পুরনো ডেটা
+(Organization, User, PaymentSubmission) অক্ষত থাকবে।
 
-### ধাপ ৩ — Vercel-এ ডেপ্লয় করুন (ফ্রি)
-1. এই কোড GitHub-এ পুশ করুন
-2. https://vercel.com → "New Project" → আপনার রিপো সিলেক্ট করুন
-3. Environment Variables-এ `.env` এর ৪টা ভ্যারিয়েবল যোগ করুন
-4. Deploy চাপুন
-5. প্রথমবার ডেপ্লয়ের পর একবার `npm run db:push` ও `npm run db:seed` লোকাল মেশিন থেকে (একই DATABASE_URL দিয়ে) চালান
-
-### ধাপ ৪ — ডোমেইন যোগ করুন
-Vercel প্রজেক্ট সেটিংসে আপনার কেনা ডোমেইন (যেমন messmanager.com.bd) যোগ করুন — Vercel বিনামূল্যে SSL দেয়।
+### ধাপ ৩ — Vercel-এ পুশ করুন
+```bash
+git add .
+git commit -m "Phase 2: Flats, Tenants, Payments, Due Tracker, Expenses"
+git push
+```
+Vercel অটো রিডেপ্লয় করবে। ডেপ্লয়ের পর একবার (লোকাল মেশিন থেকে, একই `DATABASE_URL` দিয়ে) `npm run db:push` চালাতে ভুলবেন না।
 
 ---
 
 ## ২. bKash/Nagad নম্বর সেট করুন
 
-`lib/plans.js` ফাইলে `PAYMENT_NUMBERS` অবজেক্টে আপনার আসল bKash/Nagad নম্বর বসান — এখন প্লেসহোল্ডার
-(`01XXXXXXXXX`) আছে।
+`lib/plans.js` ফাইলে `PAYMENT_NUMBERS` অবজেক্টে আপনার আসল bKash/Nagad নম্বর বসান।
 
-## ৩. Super Admin হিসেবে কীভাবে কাজ করবেন
+## ৩. পরের ধাপে কী বাকি (Phase 3)
 
-1. `/login` এ আপনার Super Admin ফোন+PIN দিয়ে লগইন করুন (seed script-এ যা সেট করেছেন)
-2. স্বয়ংক্রিয়ভাবে `/admin` এ নিয়ে যাবে
-3. যখন কোনো owner পেমেন্ট সাবমিট করবে (bKash/Nagad TrxID সহ), সেটা এখানে "পেন্ডিং" তালিকায় দেখাবে
-4. bKash/Nagad অ্যাপ/SMS-এ গিয়ে TrxID মিলিয়ে **Approve** চাপুন — তখন ঐ owner-এর সাবস্ক্রিপশন অটো extend হয়ে যাবে
-
-## ৪. প্রাইসিং বদলাতে চাইলে
-
-`lib/plans.js` ফাইলে `PLANS` অবজেক্টে price/duration বদলান — landing, billing, admin সব জায়গায় অটো আপডেট হবে।
-
-## ৫. পরের ধাপে কী করতে হবে (Phase 2)
-
-- `/dashboard` এর ভেতরে Flats/Tenants/Payments ইত্যাদি পেজ যোগ করা (আগের GAS অ্যাপের লজিক পোর্ট করে)
-- প্রতিটা API route-এ `orgId` দিয়ে ডেটা filter করা (multi-tenant isolation) — schema এ সব model-এ `orgId` field আগে থেকেই আছে
+- Owner Panel সম্পূর্ণ করা (owner payments/advances/investments schema + pages)
+- Flat/Tenant এডিট করার UI (এখন শুধু যোগ/মুছা যায়)
 - WhatsApp/SMS rent reminder (cron job)
 - PDF রিসিট জেনারেশন
+- CSV/Excel এক্সপোর্ট
+- Occupancy trend চার্ট ও রিপোর্ট পেজ (আগের GAS ড্যাশবোর্ডে যা ছিল)
+

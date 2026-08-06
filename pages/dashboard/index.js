@@ -1,64 +1,97 @@
-import { requireOrgUser } from '../../lib/guard';
+import Layout from '../../components/Layout';
+import { pageContext } from '../../lib/guard';
+import { prisma } from '../../lib/db';
+import { currentMonthYear, effectiveDue, money } from '../../lib/calc';
 
 export async function getServerSideProps({ req }) {
-  const result = await requireOrgUser(req);
-  if (result.redirect) return result;
-  const { user, org, status } = result;
+  const ctx = await pageContext(req);
+  if (ctx.redirect) return ctx;
+  const { org, layoutProps } = ctx;
 
-  if (status === 'expired' || status === 'suspended') {
-    return { redirect: { destination: '/billing?locked=1', permanent: false } };
-  }
+  const [flats, tenants, rentPayments, expenses] = await Promise.all([
+    prisma.flat.findMany({ where: { orgId: org.id } }),
+    prisma.tenant.findMany({ where: { orgId: org.id, status: 'Active' } }),
+    prisma.rentPayment.findMany({ where: { orgId: org.id } }),
+    prisma.expense.findMany({ where: { orgId: org.id } }),
+  ]);
 
-  const daysLeft =
-    status === 'trial'
-      ? Math.max(0, Math.ceil((new Date(org.trialEndsAt) - new Date()) / 86400000))
-      : null;
+  const { month, year } = currentMonthYear();
+  const totalSeats = flats.reduce((a, f) => a + f.totalSeats, 0);
+  const activeTenants = tenants.length;
+
+  const payLite = rentPayments.map((p) => ({ tenantId: p.tenantId, month: p.month, year: p.year, paid: p.paid }));
+  let collected = 0, due = 0, paidCount = 0, dueCount = 0;
+  tenants.forEach((t) => {
+    const { due: d, paidThisMonth } = effectiveDue(t, month, year, payLite);
+    collected += paidThisMonth;
+    due += d;
+    if (d <= 0) paidCount++; else dueCount++;
+  });
+
+  const totalExpense = expenses
+    .filter((e) => new Date(e.date).getMonth() === new Date().getMonth() && new Date(e.date).getFullYear() === new Date().getFullYear())
+    .reduce((a, e) => a + e.amount, 0);
 
   return {
     props: {
-      userName: user.name,
-      orgName: org.name,
-      status,
-      daysLeft,
+      layoutProps,
+      kpis: {
+        totalSeats,
+        activeTenants,
+        occupancyPct: totalSeats ? Math.round((activeTenants / totalSeats) * 100) : 0,
+        collected,
+        due,
+        paidCount,
+        dueCount,
+        totalExpense,
+        month,
+        year,
+      },
     },
   };
 }
 
-export default function Dashboard({ userName, orgName, status, daysLeft }) {
+export default function Dashboard({ layoutProps, kpis }) {
   return (
-    <div className="app-shell">
-      <aside className="app-sidebar">
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>🏠 {orgName}</div>
-        <div style={{ fontSize: 12, color: 'var(--mu)', marginBottom: 20 }}>{userName}</div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <a className="btn" style={{ justifyContent: 'flex-start', border: 'none' }}>ড্যাশবোর্ড</a>
-          <a className="btn" style={{ justifyContent: 'flex-start', border: 'none' }} href="/dashboard/flats">ফ্ল্যাটস</a>
-          <a className="btn" style={{ justifyContent: 'flex-start', border: 'none' }} href="/dashboard/tenants">টেনেন্টস</a>
-          <a className="btn" style={{ justifyContent: 'flex-start', border: 'none' }} href="/billing">বিলিং</a>
-          <form action="/api/auth/logout" method="post" onSubmit={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => (window.location.href = '/login')); }}>
-            <button className="btn" style={{ justifyContent: 'flex-start', border: 'none', color: 'var(--rd)', width: '100%' }}>লগআউট</button>
-          </form>
-        </nav>
-      </aside>
+    <Layout {...layoutProps}>
+      <div className="dash-topbar">
+        <div className="dash-title">ড্যাশবোর্ড — {kpis.month} {kpis.year}</div>
+      </div>
 
-      <main className="app-main">
-        {status === 'trial' && (
-          <div className="alert alert-warn">
-            আপনার ফ্রি ট্রায়ালের <b>{daysLeft} দিন</b> বাকি আছে। ট্রায়াল শেষ হওয়ার আগে{' '}
-            <a href="/billing" style={{ fontWeight: 800, color: 'var(--pr)' }}>সাবস্ক্রিপশন চালু করুন</a> — না হলে অ্যাক্সেস বন্ধ হয়ে যাবে।
-          </div>
-        )}
-
-        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>স্বাগতম, {userName} 👋</h1>
-
-        <div className="card" style={{ padding: 24 }}>
-          <p style={{ color: 'var(--mu)', fontSize: 14 }}>
-            এখানে পুরো Mess Manager ড্যাশবোর্ড (Flats, Tenants, Rent Payments, Service Charge, Advance Money,
-            Due Tracker, Expenses, Owner Panel) বসানো হবে — এটা Phase 1 এর পরের ধাপ। আপাতত অ্যাকাউন্ট, ট্রায়াল
-            এবং বিলিং সিস্টেম কাজ করছে।
-          </p>
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-ic" style={{ background: 'var(--pr2)', color: 'var(--pr)' }}>👥</div>
+          <div><div className="kpi-l">সক্রিয় টেনেন্ট</div><div className="kpi-v">{kpis.activeTenants}</div></div>
         </div>
-      </main>
-    </div>
+        <div className="kpi-card">
+          <div className="kpi-ic" style={{ background: 'var(--pu2)', color: 'var(--pu)' }}>🏠</div>
+          <div><div className="kpi-l">অকুপ্যান্সি</div><div className="kpi-v">{kpis.occupancyPct}%</div></div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-ic" style={{ background: 'var(--gn2)', color: 'var(--gn)' }}>💰</div>
+          <div><div className="kpi-l">এই মাসে কালেক্টেড</div><div className="kpi-v">{money(kpis.collected)}</div></div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-ic" style={{ background: 'var(--rd2)', color: 'var(--rd)' }}>⚠️</div>
+          <div><div className="kpi-l">মোট ডিউ</div><div className="kpi-v">{money(kpis.due)}</div></div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-ic" style={{ background: 'var(--yw2)', color: 'var(--yw)' }}>🧾</div>
+          <div><div className="kpi-l">এই মাসের খরচ</div><div className="kpi-v">{money(kpis.totalExpense)}</div></div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>রেন্ট স্ট্যাটাস</h3>
+        <p style={{ fontSize: 13.5, color: 'var(--mu)' }}>
+          <b style={{ color: 'var(--gn)' }}>{kpis.paidCount} জন</b> পেইড • <b style={{ color: 'var(--rd)' }}>{kpis.dueCount} জন</b> ডিউ আছে
+        </p>
+        <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a className="btn btn-primary" href="/dashboard/tenants">+ টেনেন্ট যোগ করুন</a>
+          <a className="btn" href="/dashboard/rent-payments">রেন্ট পেমেন্ট নিন</a>
+          <a className="btn" href="/dashboard/due-tracker">ডিউ ট্র্যাকার দেখুন</a>
+        </div>
+      </div>
+    </Layout>
   );
 }
