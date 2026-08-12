@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { requireSuperAdmin } from '../../lib/guard';
+import AdminHeader from '../../components/AdminHeader';
 
 export async function getServerSideProps({ req }) {
   const result = await requireSuperAdmin(req);
@@ -39,8 +40,7 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="app-main" style={{ maxWidth: 640, margin: '0 auto', padding: '28px 24px' }}>
-      <a href="/admin" className="btn bs" style={{ marginBottom: 16 }}>← Admin</a>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}><i className="ti ti-speakerphone"></i> Announcements</h1>
+      <AdminHeader title={<><i className="ti ti-speakerphone"></i> Announcements</>} backHref="/admin" />
       <p style={{ color: 'var(--mu)', fontSize: 13, marginBottom: 20 }}>
         নতুন announcement বানালে সব কাস্টমারের অ্যাপে একটা ব্যানার দেখাবে — একবারে শুধু একটাই active থাকতে পারে।
       </p>

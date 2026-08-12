@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { requireSuperAdmin } from '../../lib/guard';
+import AdminHeader from '../../components/AdminHeader';
 
 export async function getServerSideProps({ req }) {
   const result = await requireSuperAdmin(req);
@@ -62,15 +63,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="app-main" style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800 }}>Super Admin</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <a href="/admin/coupons" className="btn bs"><i className="ti ti-ticket"></i> Coupons</a>
-          <a href="/admin/announcements" className="btn bs"><i className="ti ti-speakerphone"></i> Announcements</a>
-          <a href="/admin/audit-log" className="btn bs"><i className="ti ti-notes"></i> Audit Log</a>
-          <a href="/api/admin/export?type=customers" className="btn bs"><i className="ti ti-download"></i> Export Customers</a>
-          <a href="/api/admin/export?type=payments" className="btn bs"><i className="ti ti-download"></i> Export Payments</a>
-        </div>
+      <AdminHeader title="Super Admin" />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        <a href="/admin/coupons" className="btn bs"><i className="ti ti-ticket"></i> Coupons</a>
+        <a href="/admin/announcements" className="btn bs"><i className="ti ti-speakerphone"></i> Announcements</a>
+        <a href="/admin/audit-log" className="btn bs"><i className="ti ti-notes"></i> Audit Log</a>
+        <a href="/api/admin/export?type=customers" className="btn bs"><i className="ti ti-download"></i> Export Customers</a>
+        <a href="/api/admin/export?type=payments" className="btn bs"><i className="ti ti-download"></i> Export Payments</a>
       </div>
 
       {analytics && (

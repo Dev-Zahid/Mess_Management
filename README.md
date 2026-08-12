@@ -176,3 +176,56 @@ git push
 
 GitHub-এ push করার পর Vercel-এ প্রজেক্ট কানেক্ট করা থাকলে **অটোমেটিক্যালি নতুন ভার্সন deploy হয়ে যাবে** —
 আলাদা করে কিছু করা লাগবে না।
+
+---
+
+## এই সেশনে (v7) যা ফিক্স/আপডেট হলো
+
+### বাগ ফিক্স
+1. **🔴 Owner Panel-এ Advance Money section ছিলই না** — `renderOwners()` কখনো tenant-দের থেকে collected
+   security deposit (`DB.advPays`) touch করত না। এখন Service Charge-এর প্যাটার্নে একটা নতুন
+   "Advance Money (Tenant Deposits)" সেকশন আছে — Collected / Refunded / Held তিন কার্ড। এটা ইচ্ছাকৃতভাবে
+   Net Balance-এ যোগ হয়নি কারণ এটা profit না, tenant-কে ফেরত দেওয়ার দায় (liability)।
+2. **🔴 Super Admin-এর কোনো Logout ছিল না** — `/admin/*` পেজগুলোতে কোনো navigation chrome-ই ছিল না।
+   এখন প্রতিটা admin পেজে একটা শেয়ার্ড header (`components/AdminHeader.js`) আছে যেখানে Logout বাটন থাকে।
+3. **🔴 মোবাইলে ল্যান্ডিং পেজে Login option ছিল না** — `.nav-links{display:none}` মোবাইলে পুরো nav (ফিচার,
+   প্রাইসিং, **লগইন** সহ) লুকিয়ে ফেলত, শুধু Signup বাটন visible থাকত। এখন Login বাটন আলাদাভাবে সবসময়
+   দেখায়।
+4. **🔴 মোবাইলে sidebar মেনু বাটনে ক্লিক করলে মেনু খুলত না** — root cause: `--nw` variable দুই জায়গায়
+   ব্যবহার হতো (sidebar-এর width + main content-এর margin), মোবাইলে `--nw:0px` সেট করায় sidebar-এর
+   width-ও 0 হয়ে যেত — ফলে `.open` class toggle হলেও sidebar-এর কোনো width না থাকায় কিছুই দেখা যেত না।
+   এখন `--nw` শুধু margin-এর জন্য ব্যবহার হয় (আলাদা `.main{margin-left:0}` rule দিয়ে), sidebar তার আসল
+   242px width রাখে যাতে drawer হিসেবে ঠিকভাবে slide করে।
+
+### Bug না, standard behavior — ব্যাখ্যা
+**"একই ব্রাউজারে ২টা ট্যাবে ২টা আলাদা account ব্যবহার করা যায় না, শেষ যেটায় লগইন করা হয় দুটোতেই সেটাই
+দেখায়"** — এটা bug না, এটা **সব ওয়েবসাইটের standard আচরণ** (Facebook, Gmail, ব্যাংকিং সাইট — সবই একই
+রকম কাজ করে)। কারণ: লগইন সেশন একটা কুকি (cookie) হিসেবে সংরক্ষিত হয়, আর কুকি ট্যাব-ভিত্তিক না —
+**পুরো ব্রাউজারের জন্য একটাই**, একই ডোমেইনের সব ট্যাব সেই একই কুকি শেয়ার করে। তাই একই ব্রাউজারে একসাথে
+২টা আলাদা account দিয়ে টেস্ট করতে চাইলে:
+- একটা normal ট্যাবে একটা account, আরেকটা **Incognito/Private window**-এ অন্য account, অথবা
+- দুইটা আলাদা ব্রাউজার ব্যবহার করুন (যেমন Chrome + Firefox), অথবা
+- Chrome-এর "Profiles" ফিচার ব্যবহার করুন
+
+### Trial মেয়াদ নিয়ে
+Default trial `lib/plans.js`-এ `TRIAL_DAYS = 7` (৭ দিন) সেট করা আছে। এটা প্রতিটা **নতুন** সাইনআপের জন্য
+প্রযোজ্য — কেউ যদি এই ভ্যারিয়েবল বদলানোর **আগে** সাইনআপ করে থাকে, তার `trialEndsAt` তারিখ তখনই ফিক্স
+হয়ে গেছে, পরে constant বদলালে সেই পুরনো অ্যাকাউন্টে retroactively প্রভাব পড়বে না। যদি ২ দিন পর trial
+expire হওয়া দরকার ছিল testing-এর জন্য, `lib/plans.js`-এ `TRIAL_DAYS = 2` করে দিন — এটা নতুন সাইনআপে কাজ
+করবে। ইতিমধ্যে তৈরি হওয়া test account-এর জন্য Super Admin প্যানেল থেকে `/admin/customers/[id]` পেজে
+গিয়ে "Suspend" করে দিলে সাথে সাথে লক করে ফেলতে পারবেন (টেস্ট করার জন্য)।
+
+### Announcements-এ "ছবির এরর" ও position সমস্যা
+- **Position:** `body{display:flex}` (sidebar+content পাশাপাশি) হওয়ায় banner ভুল জায়গায় (sidebar-এর
+  পাশে একটা সরু কলাম হিসেবে) বসত। এখন সঠিক জায়গায় (topbar-এর নিচে, পুরো width জুড়ে) বসে।
+- **"ছবির এরর":** root cause পাওয়া গেছে — Admin/landing/auth পেজে Tabler icon font কখনো লোডই হতো না,
+  আর emoji (🎟️📢📜 ইত্যাদি) ব্যবহার হতো যেগুলো কিছু OS/browser-এ ফন্ট না থাকলে broken/tofu box হিসেবে
+  দেখায়। এখন `pages/_document.js` দিয়ে icon font গ্লোবালি লোড হয়, সব emoji `<i class="ti ti-...">` icon
+  দিয়ে replace করা হয়েছে।
+
+### ল্যান্ডিং পেজ সম্পূর্ণ আপগ্রেড
+2026 SaaS landing page best practices রিসার্চ করে (hero-এ actual product preview, pain-point section,
+"কীভাবে কাজ করে" ৩-ধাপ, বিস্তৃত ফিচার গ্রিড, security/trust ব্যান্ড, FAQ accordion, শক্তিশালী footer)
+পুরো ল্যান্ডিং পেজ নতুন করে বানানো হয়েছে। **সততার সাথে জানাচ্ছি:** ভুয়া টেস্টিমোনিয়াল বা কাস্টমার
+সংখ্যা যোগ করা হয়নি (এখনো কোনো real customer নেই) — এর বদলে honest trust signal (ফ্রি ট্রায়াল, ডেটা
+প্রাইভেসি, স্বচ্ছ প্রাইসিং) ব্যবহার করা হয়েছে।

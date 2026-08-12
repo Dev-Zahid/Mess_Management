@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { requireSuperAdmin } from '../../../lib/guard';
+import AdminHeader from '../../../components/AdminHeader';
 
 export async function getServerSideProps({ req, params }) {
   const result = await requireSuperAdmin(req);
@@ -61,13 +62,8 @@ export default function CustomerDetail({ orgId }) {
 
   return (
     <div className="app-main" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
-      <a href="/admin" className="btn bs" style={{ marginBottom: 16 }}>← সব কাস্টমার</a>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800 }}>{org.name}</h1>
-        <span className={`badge ${STATUS_BADGE[org.status]}`}>{org.status}</span>
-      </div>
-      <p style={{ color: 'var(--mu)', fontSize: 13.5, marginBottom: 20 }}>{org.ownerName} • {org.ownerPhone} • যোগ দিয়েছেন {new Date(org.createdAt).toLocaleDateString('en-GB')}</p>
+      <AdminHeader title={<>{org.name} <span className={`badge ${STATUS_BADGE[org.status]}`} style={{ marginLeft: 8 }}>{org.status}</span></>} backHref="/admin" />
+      <p style={{ color: 'var(--mu)', fontSize: 13.5, marginBottom: 20, marginTop: -12 }}>{org.ownerName} • {org.ownerPhone} • যোগ দিয়েছেন {new Date(org.createdAt).toLocaleDateString('en-GB')}</p>
 
       <div className="admin-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         <div className="card" style={{ padding: 18 }}>

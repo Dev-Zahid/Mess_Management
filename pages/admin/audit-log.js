@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/db';
 import { requireSuperAdmin } from '../../lib/guard';
+import AdminHeader from '../../components/AdminHeader';
 
 export async function getServerSideProps({ req }) {
   const result = await requireSuperAdmin(req);
@@ -16,8 +17,7 @@ export async function getServerSideProps({ req }) {
 export default function AuditLogPage({ logs }) {
   return (
     <div className="app-main" style={{ maxWidth: 800, margin: '0 auto', padding: '28px 24px' }}>
-      <a href="/admin" className="btn bs" style={{ marginBottom: 16 }}>← Admin</a>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}><i className="ti ti-notes"></i> Audit Log</h1>
+      <AdminHeader title={<><i className="ti ti-notes"></i> Audit Log</>} backHref="/admin" />
       <p style={{ color: 'var(--mu)', fontSize: 13, marginBottom: 20 }}>সাম্প্রতিক ২০০টা Super Admin অ্যাকশন — extend, suspend, impersonate, payment review ইত্যাদি।</p>
 
       <div className="card" style={{ overflow: 'hidden' }}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { requireSuperAdmin } from '../../lib/guard';
+import AdminHeader from '../../components/AdminHeader';
 
 export async function getServerSideProps({ req }) {
   const result = await requireSuperAdmin(req);
@@ -36,8 +37,7 @@ export default function AddCustomerPage() {
 
   return (
     <div className="app-main" style={{ maxWidth: 480, margin: '0 auto', padding: '28px 24px' }}>
-      <a href="/admin" className="btn bs" style={{ marginBottom: 16 }}>← Admin</a>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>নতুন কাস্টমার (Manual)</h1>
+      <AdminHeader title="নতুন কাস্টমার (Manual)" backHref="/admin" />
       <p style={{ color: 'var(--mu)', fontSize: 13, marginBottom: 20 }}>অফলাইনে ফোনে সেল হলে এখান থেকে সরাসরি অ্যাকাউন্ট বানিয়ে দিন।</p>
 
       {err && <div className="alert alert-error">{err}</div>}

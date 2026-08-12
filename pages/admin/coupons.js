@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { requireSuperAdmin } from '../../lib/guard';
+import AdminHeader from '../../components/AdminHeader';
 
 export async function getServerSideProps({ req }) {
   const result = await requireSuperAdmin(req);
@@ -42,8 +43,7 @@ export default function CouponsPage() {
 
   return (
     <div className="app-main" style={{ maxWidth: 700, margin: '0 auto', padding: '28px 24px' }}>
-      <a href="/admin" className="btn bs" style={{ marginBottom: 16 }}>← Admin</a>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}><i className="ti ti-ticket"></i> Coupons</h1>
+      <AdminHeader title={<><i className="ti ti-ticket"></i> Coupons</>} backHref="/admin" />
 
       <div className="card" style={{ padding: 18, marginBottom: 24 }}>
         {err && <div className="alert alert-error">{err}</div>}
