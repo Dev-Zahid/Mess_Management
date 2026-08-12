@@ -1,6 +1,7 @@
 import { prisma } from '../../../lib/db';
 import { getSession } from '../../../lib/auth';
 import { PLANS } from '../../../lib/plans';
+import { logAdminAction } from '../../../lib/audit';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
       where: { id: paymentId },
       data: { status: 'rejected', reviewedAt: new Date() },
     });
+    await logAdminAction(user, 'reject_payment', payment.org, `${payment.method} ৳${payment.amount} trx:${payment.trxId}`);
     return res.status(200).json({ ok: true });
   }
 
@@ -47,6 +49,7 @@ export default async function handler(req, res) {
       data: { status: 'active', plan: payment.planApplied, subscriptionEndsAt },
     }),
   ]);
+  await logAdminAction(user, 'approve_payment', payment.org, `${payment.method} ৳${payment.amount} trx:${payment.trxId} -> ${subscriptionEndsAt.toISOString().slice(0,10)}`);
 
   return res.status(200).json({ ok: true, orgName: payment.org.name, subscriptionEndsAt: subscriptionEndsAt.toISOString() });
 }

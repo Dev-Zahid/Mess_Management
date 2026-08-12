@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { PLANS, TRIAL_DAYS } from '../lib/plans';
 
 const FEATURES = [
-  { ic: '🏠', bg: '#EAF0FE', color: '#3B6DF0', title: 'মাল্টি-ফ্ল্যাট ম্যানেজমেন্ট', desc: 'একাধিক ফ্ল্যাট/মেস একটা ড্যাশবোর্ড থেকে পরিচালনা করুন — ভাড়া, সিট, টেনেন্ট সব একসাথে।' },
-  { ic: '💰', bg: '#E6F9EF', color: '#12B76A', title: 'অটোমেটিক রেন্ট ট্র্যাকিং', desc: 'কে পেইড, কে ডিউ, কে পার্শিয়াল — এক নজরে দেখুন, ম্যানুয়াল হিসাব লাগবে না।' },
-  { ic: '📊', bg: '#F1EBFE', color: '#8B5CF6', title: 'রিপোর্ট ও অ্যানালিটিক্স', desc: 'মাসওয়ারি আয়-ব্যয়, অকুপ্যান্সি ট্রেন্ড, প্রফিট/লস — সব গ্রাফে দেখুন।' },
-  { ic: '👥', bg: '#FEF3E2', color: '#F79009', title: 'টিম অ্যাক্সেস (PIN ভিত্তিক)', desc: 'কেয়ারটেকার বা ম্যানেজারকে আলাদা PIN দিয়ে সীমিত অ্যাক্সেস দিন।' },
-  { ic: '🧾', bg: '#FDEDEC', color: '#F04438', title: 'রিসিট ও এক্সপেন্স ট্র্যাকার', desc: 'প্রতিটা পেমেন্টের রিসিট, বাজার খরচ, ইউটিলিটি বিল — সব এক জায়গায়।' },
-  { ic: '📱', bg: '#EAF0FE', color: '#3B6DF0', title: 'মোবাইল থেকেই চালান', desc: 'ফোন, ট্যাব বা কম্পিউটার — যেকোনো ডিভাইস থেকে অ্যাক্সেস করুন।' },
+  { ic: 'ti-building-community', bg: '#EAF0FE', color: '#3B6DF0', title: 'মাল্টি-ফ্ল্যাট ম্যানেজমেন্ট', desc: 'একাধিক ফ্ল্যাট/মেস একটা ড্যাশবোর্ড থেকে পরিচালনা করুন — ভাড়া, সিট, টেনেন্ট সব একসাথে।' },
+  { ic: 'ti-cash', bg: '#E6F9EF', color: '#12B76A', title: 'অটোমেটিক রেন্ট ট্র্যাকিং', desc: 'কে পেইড, কে ডিউ, কে পার্শিয়াল — এক নজরে দেখুন, ম্যানুয়াল হিসাব লাগবে না।' },
+  { ic: 'ti-chart-bar', bg: '#F1EBFE', color: '#8B5CF6', title: 'রিপোর্ট ও অ্যানালিটিক্স', desc: 'মাসওয়ারি আয়-ব্যয়, অকুপ্যান্সি ট্রেন্ড, প্রফিট/লস — সব গ্রাফে দেখুন।' },
+  { ic: 'ti-users', bg: '#FEF3E2', color: '#F79009', title: 'টিম অ্যাক্সেস (ফোন + PIN)', desc: 'কেয়ারটেকার বা ম্যানেজারকে নিজের ফোন নম্বর ও PIN দিয়ে সীমিত অ্যাক্সেস দিন।' },
+  { ic: 'ti-receipt', bg: '#FDEDEC', color: '#F04438', title: 'রিসিট ও এক্সপেন্স ট্র্যাকার', desc: 'প্রতিটা পেমেন্টের রিসিট, বাজার খরচ, ইউটিলিটি বিল — সব এক জায়গায়।' },
+  { ic: 'ti-device-mobile', bg: '#EAF0FE', color: '#3B6DF0', title: 'মোবাইল থেকেই চালান', desc: 'ফোন, ট্যাব বা কম্পিউটার — যেকোনো ডিভাইস থেকে অ্যাক্সেস করুন।' },
 ];
 
 export default function Landing() {
@@ -21,7 +21,7 @@ export default function Landing() {
 
       <nav className="nav-bar">
         <div className="nav-inner">
-          <div className="brand"><span className="ic">🏠</span>Mess Manager</div>
+          <div className="brand"><span className="ic"><i className="ti ti-building-community"></i></span>Mess Manager</div>
           <div className="nav-links">
             <a href="#features">ফিচার</a>
             <a href="#pricing">প্রাইসিং</a>
@@ -46,7 +46,7 @@ export default function Landing() {
         <div className="feat-grid">
           {FEATURES.map((f) => (
             <div className="card feat-card" key={f.title}>
-              <div className="feat-ic" style={{ background: f.bg, color: f.color }}>{f.ic}</div>
+              <div className="feat-ic" style={{ background: f.bg, color: f.color }}><i className={`ti ${f.ic}`}></i></div>
               <h3>{f.title}</h3>
               <p>{f.desc}</p>
             </div>

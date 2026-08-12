@@ -32,7 +32,7 @@ export default function LoginPage() {
   return (
     <div className="auth-wrap">
       <div className="card auth-card">
-        <div className="auth-logo"><span className="ic">🏠</span><span className="tx">Mess Manager</span></div>
+        <div className="auth-logo"><span className="ic"><i className="ti ti-building-community"></i></span><span className="tx">Mess Manager</span></div>
         <div className="auth-title">লগইন করুন</div>
         <div className="auth-sub">আপনার মোবাইল নম্বর ও PIN দিন</div>
 

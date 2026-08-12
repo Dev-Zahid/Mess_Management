@@ -3,7 +3,8 @@ import { verifyPin, createSession } from '../../../lib/auth';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { phone, pin } = req.body || {};
+  const { pin } = req.body || {};
+  const phone = String(req.body?.phone || '').trim();
   if (!phone || !pin) return res.status(400).json({ error: 'নম্বর ও PIN দিন' });
 
   const user = await prisma.user.findUnique({ where: { phone } });

@@ -4,10 +4,14 @@ import { TRIAL_DAYS } from '../../../lib/plans';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { messName, ownerName, phone, pin } = req.body || {};
+  const { messName, ownerName, pin } = req.body || {};
+  const phone = String(req.body?.phone || '').trim();
 
   if (!messName || !ownerName || !phone || !pin) {
     return res.status(400).json({ error: 'সব ফিল্ড পূরণ করুন' });
+  }
+  if (!/^01\d{9}$/.test(phone)) {
+    return res.status(400).json({ error: 'সঠিক ১১ ডিজিট মোবাইল নম্বর দিন (01XXXXXXXXX)' });
   }
   if (String(pin).length < 4) {
     return res.status(400).json({ error: 'PIN কমপক্ষে ৪ ডিজিট হতে হবে' });

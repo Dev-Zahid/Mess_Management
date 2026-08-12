@@ -28,17 +28,18 @@ model Organization {
   subscriptionEndsAt DateTime?
   maxFlats        Int      @default(3)          // plan limit, super-admin can raise it
 
+  // Super Admin operational fields
+  suspendReason   String?
+  adminNotes      String   @default("")   // free-text notes only Super Admin sees
+  couponUsed      String?                  // coupon code applied at signup/renewal, if any
+
   users           User[]
-  flats           Flat[]
-  tenants         Tenant[]
-  rentPayments    RentPayment[]
-  svcPayments     ServiceCharge[]
-  advPayments     AdvancePayment[]
-  expenses        Expense[]
   paymentSubmissions PaymentSubmission[]
 }
 
-// ── Users belong to exactly one org (mess staff), except SuperAdmin ──
+// ── Every login-capable person: Owner, Management (added by Owner via
+//    Team/PINs), and SuperAdmin (orgId=null). Everyone logs in the SAME
+//    way — phone + PIN at /login — no separate in-app PIN screen. ──
 model User {
   id        String   @id @default(cuid())
   orgId     String?
@@ -47,87 +48,164 @@ model User {
   phone     String   @unique
   pinHash   String
   role      String   @default("Admin") // SuperAdmin | Owner | Admin | Management
+  flats     String   @default("ALL")   // "ALL" or comma-separated Flat IDs (Management only)
+  perms     String   @default("")      // JSON string, see lib/perms.js (Management only)
   createdAt DateTime @default(now())
 }
 
+// ══════════════════════════════════════════════════════════════
+//  Everything below mirrors the ORIGINAL Code.gs "sheets" 1:1 — same
+//  field names, same semantics — just Postgres rows instead of Sheet
+//  rows, scoped by orgId instead of one-spreadsheet-per-customer.
+//  Business IDs (F001, T001, R001...) are still generated exactly like
+//  the original genId(), so the untouched frontend keeps working as-is.
+//  A compound primary key (orgId + id) keeps each org's ID sequence
+//  independent, just like each customer having their own spreadsheet.
+// ══════════════════════════════════════════════════════════════
+
+model TeamMember {
+  orgId String
+  pin   String  // DEPRECATED — superseded by User.phone+pinHash. Kept only so
+  name  String  // `prisma db push` doesn't destroy pre-existing rows; the app
+  role  String  @default("Management") // no longer reads/writes this model.
+  flats String  @default("ALL")
+  perms String  @default("")
+
+  @@id([orgId, pin])
+}
+
 model Flat {
-  id         String   @id @default(cuid())
   orgId      String
-  org        Organization @relation(fields: [orgId], references: [id])
+  id         String   // business ID e.g. "F001"
   name       String
-  address    String?
-  totalSeats Int      @default(0)
+  address    String   @default("")
+  ownerName  String   @default("")
   flatRent   Float    @default(0)
-  ownerName  String?
-  notes      String?
-  tenants    Tenant[]
-  createdAt  DateTime @default(now())
+  totalRooms Int      @default(0)
+  totalSeats Int      @default(0)
+  notes      String   @default("")
+  roomsJson  String   @default("[]") // [{name,seats:[...]}]
+
+  @@id([orgId, id])
 }
 
 model Tenant {
-  id             String   @id @default(cuid())
-  orgId          String
-  org            Organization @relation(fields: [orgId], references: [id])
-  flatId         String?
-  flat           Flat?    @relation(fields: [flatId], references: [id])
-  name           String
-  room           String?
-  phone          String?
-  rent           Float    @default(0)
-  serviceCharge  Float    @default(0)
-  advanceDue     Float    @default(0)
-  entryDate      DateTime?
-  leftDate       DateTime?
-  status         String   @default("Active") // Active | Inactive | Left
-  rentPayments   RentPayment[]
-  svcPayments    ServiceCharge[]
-  advPayments    AdvancePayment[]
-  createdAt      DateTime @default(now())
+  orgId         String
+  id            String  // business ID e.g. "T001"
+  flatId        String  @default("")
+  name          String
+  room          String  @default("")
+  phone         String  @default("")
+  rent          Float   @default(0)
+  serviceCharge Float   @default(0)
+  advanceDue    Float   @default(0)
+  entry         String  @default("") // ISO date string
+  leftDate      String  @default("")
+  status        String  @default("Active") // Active | Inactive | Left
+  notes         String  @default("")
+
+  @@id([orgId, id])
 }
 
 model RentPayment {
-  id      String   @id @default(cuid())
-  orgId   String
-  org     Organization @relation(fields: [orgId], references: [id])
-  tenantId String
-  tenant  Tenant   @relation(fields: [tenantId], references: [id])
-  flatId  String?
-  month   String
-  year    Int
-  paid    Float
-  date    DateTime @default(now())
+  orgId      String
+  id         String // business ID e.g. "R001"
+  date       String
+  flatId     String @default("")
+  tid        String
+  name       String @default("")
+  room       String @default("")
+  month      String
+  year       Int
+  rentAmount Float  @default(0)
+  paid       Float
+  carryIn    Float  @default(0)
+  method     String @default("")
+  receipt    String @default("")
+
+  @@id([orgId, id])
 }
 
-model ServiceCharge {
-  id       String  @id @default(cuid())
-  orgId    String
-  org      Organization @relation(fields: [orgId], references: [id])
-  tenantId String
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
-  month    String
-  year     Int
-  paid     Float
-  date     DateTime @default(now())
+model ServicePayment {
+  orgId        String
+  id           String // e.g. "S001"
+  date         String
+  flatId       String @default("")
+  tid          String
+  name         String @default("")
+  serviceTotal Float  @default(0)
+  paid         Float
+  method       String @default("")
+  receipt      String @default("")
+
+  @@id([orgId, id])
 }
 
 model AdvancePayment {
-  id       String  @id @default(cuid())
-  orgId    String
-  org      Organization @relation(fields: [orgId], references: [id])
-  tenantId String
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
-  paid     Float
-  date     DateTime @default(now())
+  orgId        String
+  id           String // e.g. "A001"
+  date         String
+  flatId       String @default("")
+  tid          String
+  name         String @default("")
+  advanceTotal Float  @default(0)
+  paid         Float
+  method       String @default("")
+  receipt      String @default("")
+
+  @@id([orgId, id])
 }
 
-model Expense {
-  id       String  @id @default(cuid())
+model ServiceExpense {
+  orgId  String
+  id     String // e.g. "EXP-001"
+  date   String
+  flatId String @default("")
+  title  String
+  amount Float
+  source String @default("Service Charge")
+  notes  String @default("")
+
+  @@id([orgId, id])
+}
+
+model OwnerPayment {
   orgId    String
-  org      Organization @relation(fields: [orgId], references: [id])
-  title    String
-  amount   Float
-  source   String?  // "Service Charge" | "General" ...
-  date     DateTime @default(now())
+  id       String // e.g. "OP-001"
+  date     String
+  flatId   String @default("")
+  month    String @default("")
+  year     Int    @default(0)
+  flatRent Float  @default(0)
+  paid     Float  @default(0)
+  method   String @default("")
+  notes    String @default("")
+
+  @@id([orgId, id])
+}
+
+model OwnerAdvance {
+  orgId  String
+  id     String // e.g. "OA-001"
+  date   String
+  flatId String
+  amount Float
+  method String @default("Cash")
+  notes  String @default("")
+
+  @@id([orgId, id])
+}
+
+model Investment {
+  orgId  String
+  id     String // e.g. "INV-001"
+  date   String
+  flatId String @default("")
+  title  String
+  amount Float
+  notes  String @default("")
+
+  @@id([orgId, id])
 }
 
 // ── Manual bKash/Nagad payment submissions (owner submits, you verify) ──
@@ -145,3 +223,44 @@ model PaymentSubmission {
   submittedAt  DateTime @default(now())
   reviewedAt   DateTime?
 }
+
+// ══════════════════════════════════════════════════════════════
+//  Super Admin operational tables
+// ══════════════════════════════════════════════════════════════
+
+// Every sensitive action a Super Admin takes (extend, suspend, impersonate,
+// coupon created, etc.) — so "who changed this account last Wednesday" is
+// always answerable.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String   // the SuperAdmin User.id who performed the action
+  actorName  String
+  action     String   // e.g. "extend_subscription", "suspend_org", "impersonate"
+  targetOrgId String?
+  targetOrgName String?
+  details    String   @default("") // free-text / JSON summary
+  createdAt  DateTime @default(now())
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  percentOff  Int      @default(0)   // 0-100
+  flatOff     Float    @default(0)   // flat ৳ amount off, used instead of percentOff
+  maxUses     Int      @default(0)   // 0 = unlimited
+  usedCount   Int      @default(0)
+  active      Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// Shown as a dismissible banner inside every customer's app (e.g.
+// maintenance notice, new-feature announcement). Only one should be
+// `active` at a time — the RPC layer just returns the latest active one.
+model Announcement {
+  id        String   @id @default(cuid())
+  message   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+

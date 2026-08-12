@@ -1,0 +1,2340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Mess Management</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --nw:242px;
+  --bg:#F6F8FB;--sf:#fff;--bd:#EEF1F6;--tx:#0F1729;--mu:#94A0B4;
+  --pr:#3B6DF0;--pr2:#EAF0FE;--gn:#12B76A;--gn2:#E6F9EF;
+  --yw:#F79009;--yw2:#FEF3E2;--rd:#F04438;--rd2:#FDEDEC;
+  --pu:#8B5CF6;--pu2:#F1EBFE;--or:#F79009;--or2:#FEF3E2;
+  --sh:0 1px 2px rgba(20,30,60,.04),0 1px 8px rgba(20,30,60,.03);--r:16px;
+}
+body.dark{
+  --bg:#0B1220;--sf:#141C2E;--bd:#243044;--tx:#EAEFF7;--mu:#8C99B0;
+  --pr:#5B8DFF;--pr2:#182338;
+  --gn:#3ADB8B;--gn2:#0F2A20;
+  --yw:#FFB454;--yw2:#2E2308;
+  --rd:#FF6B62;--rd2:#331414;
+  --pu:#B399F8;--pu2:#241C3D;
+  --or:#FFB454;--or2:#2E2308;
+  --sh:0 2px 14px rgba(0,0,0,.4);
+}
+body.dark .logo-ic,body.dark .av{filter:brightness(1.08)}
+body.dark .flat-card.active-flat{background:var(--pr2)}
+body.dark ::placeholder{color:#4D5A72}
+body.dark input,body.dark select,body.dark textarea{color-scheme:dark}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:13.5px;line-height:1.5;display:flex;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* Sidebar */
+.sidebar{width:var(--nw);background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:.25s;overflow-y:auto;padding:14px 12px}
+.logo{padding:8px 8px 18px;display:flex;align-items:center;gap:11px;flex-shrink:0}
+.logo-ic{width:38px;height:38px;background:linear-gradient(160deg,#5A8CF8,var(--pr) 60%,#2E52D6);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;flex-shrink:0;box-shadow:0 4px 10px rgba(59,109,240,.35)}
+.logo-tx{font-weight:800;font-size:15px;letter-spacing:-.2px}.logo-sub{font-size:11px;color:var(--mu);font-weight:500;margin-top:1px}
+.nav{flex:1;padding:4px 2px}
+.ns{font-size:10.5px;font-weight:700;color:#B7BFCC;text-transform:uppercase;letter-spacing:.6px;padding:12px 10px 7px}
+.nb{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;cursor:pointer;color:#7C8698;border:none;background:none;width:100%;text-align:left;font-family:inherit;font-size:13.5px;font-weight:600;transition:.15s;margin-bottom:2px}
+.nb:hover{background:var(--bg);color:var(--tx)}
+.nb.on{background:linear-gradient(135deg,#5A8CF8,var(--pr) 70%,#3358E0);color:#fff;font-weight:700;box-shadow:0 4px 10px rgba(59,109,240,.3)}
+.nb i{font-size:17px;width:18px;flex-shrink:0}
+.sf{padding:10px 2px 2px;border-top:1px solid var(--bd);flex-shrink:0;margin-top:6px}
+
+/* Main */
+.main{margin-left:var(--nw);flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Topbar */
+.topbar{height:68px;background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:50;gap:10px}
+.topbar-l{display:flex;align-items:center;gap:10px;min-width:0}
+.pt{font-weight:800;font-size:19px;white-space:nowrap;letter-spacing:-.3px}
+.topbar-r{display:flex;align-items:center;gap:10px;flex-shrink:0}
+
+/* Flat selector in topbar */
+.flat-selector-wrap{display:flex;align-items:center;gap:7px;background:var(--pr2);border:1px solid #D7E3FE;border-radius:10px;padding:8px 13px}
+.flat-selector-wrap i{color:var(--pr);font-size:14px}
+.flat-selector-wrap select{border:none;background:transparent;color:var(--pr);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;outline:none}
+.flat-selector-wrap select option{background:var(--sf);color:var(--tx);font-weight:400}
+body.dark .flat-selector-wrap{border-color:var(--bd)}
+
+/* Flat comparison banner */
+.flat-compare{display:grid;gap:10px;margin-bottom:16px}
+.flat-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:.15s;box-shadow:var(--sh)}
+.flat-card:hover{border-color:var(--pr);transform:translateY(-1px)}
+.flat-card.active-flat{border-color:var(--pr);background:var(--pr2)}
+.flat-card-name{font-weight:700;font-size:14px;margin-bottom:6px}
+.flat-card-stats{display:flex;gap:16px;font-size:12px}
+.flat-card-stat{display:flex;flex-direction:column}
+.flat-card-stat span:first-child{color:var(--mu);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.flat-card-stat span:last-child{font-weight:800;font-size:15px;margin-top:2px}
+
+/* Content */
+.content{padding:26px 32px 40px;flex:1}
+.page{display:none}.page.on{display:block}
+
+/* Filter bar */
+.fbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:0;background:transparent;border:none;border-radius:0;flex-wrap:wrap}
+.fbar label{font-size:13.5px;font-weight:700;color:#3B4354}
+.fbar select,.fbar input[type=number]{background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:9px 14px;color:var(--tx);font-size:13px;font-weight:600;font-family:inherit}
+.fbar select:focus,.fbar input:focus{outline:none;border-color:var(--pr)}
+
+/* Sort */
+.sbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.sbar label{font-size:11.5px;font-weight:700;color:var(--mu)}
+.sbtn{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--bd);background:var(--sf);color:var(--mu);cursor:pointer;font-family:inherit;transition:.12s}
+.sbtn:hover{background:var(--bg)}.sbtn.on{background:var(--pr2);color:var(--pr);border-color:#D7E3FE}
+
+/* Section title */
+.stl{font-weight:800;font-size:10.5px;color:#8993A6;text-transform:uppercase;letter-spacing:.5px;margin:22px 0 10px;display:flex;align-items:center;gap:6px}
+.stl::after{content:'';flex:1;height:1px;background:var(--bd)}
+.stl i{font-size:13px}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh)}
+.stat{padding:14px 16px}
+.sl{font-size:10.5px;font-weight:700;color:var(--mu);margin-bottom:4px;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:.3px}
+.sv{font-size:20px;font-weight:800}
+.gn{color:var(--gn)}.rd{color:var(--rd)}.bl{color:var(--pr)}.am{color:var(--yw)}.pu{color:var(--pu)}.or{color:var(--or)}
+
+/* Seat summary */
+.seat-summary{display:flex;align-items:center;gap:26px;padding:20px 24px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:16px;flex-wrap:wrap;box-shadow:var(--sh)}
+.seat-num-grp{display:flex;align-items:baseline;gap:6px}
+.seat-big{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.5px}
+.seat-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mu)}
+.seat-divider{width:1px;height:36px;background:var(--bd)}
+.vacant-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vchip{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.vchip-occ{background:var(--gn2);color:var(--gn)}.vchip-vac{background:var(--rd2);color:var(--rd)}
+.seat-detail-box{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)}
+.seat-detail-box.show{display:block}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;transition:.12s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.bp{background:linear-gradient(135deg,#5A8CF8,var(--pr) 70%,#3358E0);color:#fff;border-color:transparent;box-shadow:0 4px 10px rgba(59,109,240,.3)}.bp:hover{opacity:.92}
+.bs{padding:8px 13px;font-size:12.5px}
+.bd_{background:var(--rd);color:#fff;border-color:var(--rd)}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:2px solid var(--bd);margin-bottom:16px}
+.tab{padding:9px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--mu);border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.12s;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--tx)}.tab.on{color:var(--pr);border-bottom-color:var(--pr)}
+
+/* Table */
+.sh_{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:8px}
+.st_{font-weight:700;font-size:14px}.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--bg);color:var(--mu);font-weight:800;font-size:10.5px;text-align:left;padding:11px 14px;border-bottom:1px solid var(--bd);white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;cursor:pointer}
+th:hover{background:var(--bd)}
+td{padding:12px 14px;border-bottom:1px solid #F5F7FA;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg)}
+.virtual-row td{background:var(--rd2)!important;font-style:italic}
+
+/* Row colors */
+.rp td{background:var(--gn2)!important}.rpa td{background:var(--yw2)!important}.ru td{background:var(--rd2)!important}
+.ra td{background:var(--gn2)!important}.ri td{background:var(--rd2)!important}.rl td{background:#F8FAFC!important;color:var(--mu)!important}
+body.dark .rl td{background:#182338!important;color:var(--mu)!important}
+.ror td{background:var(--or2)!important}.rpu td{background:var(--pu2)!important}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:800}
+.bgn{background:var(--gn2);color:var(--gn)}.brd{background:var(--rd2);color:var(--rd)}
+.byw{background:var(--yw2);color:var(--yw)}.bbl{background:var(--pr2);color:var(--pr)}
+.bgy{background:var(--bg);color:var(--mu)}.bpu{background:var(--pu2);color:var(--pu)}
+.bor{background:var(--or2);color:var(--or)}
+.tag{display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:var(--pr2);color:var(--pr)}
+.flat-tag{display:inline-flex;padding:2px 9px;border-radius:6px;font-size:10.5px;font-weight:800;background:var(--pu2);color:var(--pu)}
+.carry-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:800;background:var(--pu2);color:var(--pu);border:1px solid var(--pu)}
+
+/* Forms */
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fr.c3{grid-template-columns:1fr 1fr 1fr}.fr.c1{grid-template-columns:1fr}.fr.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13.5px;font-family:inherit;transition:.12s}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--pr);box-shadow:0 0 0 3px rgba(59,109,240,.1)}
+.fg input[readonly]{opacity:.6;cursor:default;background:var(--bd)}
+.hint{font-size:11px;color:var(--mu);margin-top:3px}
+
+/* Room/Seat builder (Flats) */
+.room-block{background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:10px 12px;margin-bottom:8px}
+.room-block-hd{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px}
+.room-block-hd label{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:3px}
+.rb-input,.seat-input{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:6px 9px;color:var(--tx);font-size:12.5px;font-family:inherit;width:100%}
+.rb-input:focus,.seat-input:focus{outline:none;border-color:var(--pr)}
+.seat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+
+/* Modal */
+.bkd{position:fixed;inset:0;background:rgba(15,23,41,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(2px)}
+.modal{background:var(--sf);border-radius:18px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border:1px solid var(--bd);box-shadow:0 24px 64px rgba(15,23,41,.25)}
+.mh{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--sf);z-index:1;border-radius:18px 18px 0 0}
+.mh h3{font-weight:800;font-size:15px}.mb{padding:18px 20px}
+.mf{padding:14px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--sf);border-radius:0 0 18px 18px}
+
+/* Search */
+.srch{display:flex;align-items:center;gap:8px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:9px 14px}
+.srch i{color:var(--mu);font-size:14px}
+.srch input{border:none;background:none;color:var(--tx);font-size:13px;font-weight:500;outline:none;width:150px;font-family:inherit}
+.srch input::placeholder{color:#AEB6C4}
+
+/* Info box */
+.ibox{padding:11px 14px;border-radius:11px;font-size:12.5px;display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-weight:500}
+.ibox.inf{background:var(--pr2);border:1px solid #D7E3FE;color:var(--pr)}
+.ibox.warn{background:var(--yw2);border:1px solid #FBD9A6;color:var(--yw)}
+.ibox.ok{background:var(--gn2);border:1px solid #B7EBCE;color:var(--gn)}
+.ibox.pur{background:var(--pu2);border:1px solid #DCCFFB;color:var(--pu)}
+
+/* Charts */
+.cw{display:flex;flex-direction:column;gap:9px}
+.br{display:flex;align-items:center;gap:9px}
+.bl_{width:58px;text-align:right;font-size:11.5px;color:var(--mu);flex-shrink:0;font-weight:600}
+.bt{flex:1;height:18px;background:var(--bg);border-radius:5px;overflow:hidden}
+.bf{height:100%;border-radius:5px;transition:.5s}
+.bv{width:28px;font-size:11.5px;font-weight:800;flex-shrink:0}
+
+/* Progress */
+.prog{height:6px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:4px}
+.pf{height:100%;border-radius:4px;transition:.4s}
+
+/* Overview card */
+.ov-card{padding:14px;display:grid;gap:11px}
+.ov-item .sl{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+.ov-item .sv{font-size:17px;font-weight:800}
+
+/* Report card */
+.rc{cursor:pointer;padding:16px;border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);transition:.15s;display:flex;flex-direction:column;gap:5px;box-shadow:var(--sh)}
+.rc:hover{border-color:var(--pr);transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,30,60,.08)}
+
+/* Pills */
+.pill{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--bd);background:var(--sf);color:var(--mu);cursor:pointer;transition:.12s;font-family:inherit}
+.pill:hover{background:var(--bg)}.pill.on{background:linear-gradient(135deg,#5A8CF8,var(--pr) 70%,#3358E0);color:#fff;border-color:transparent;box-shadow:0 4px 10px rgba(59,109,240,.25)}
+
+/* Avatar */
+.av{width:26px;height:26px;border-radius:50%;background:var(--pr2);color:var(--pr);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;flex-shrink:0}
+.profile-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--pu),#6D28D9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;cursor:pointer}
+.bell-wrap{position:relative;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#7C8698;cursor:pointer;transition:.12s;flex-shrink:0;border:none;background:none;font-size:18px}
+.bell-wrap:hover{background:var(--bg);color:var(--tx)}
+.bell-dot{position:absolute;top:2px;right:3px;background:var(--rd);color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--sf)}
+
+/* Toast */
+.toast{position:fixed;bottom:18px;right:18px;padding:12px 18px;border-radius:11px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:.25s;transform:translateY(6px);max-width:320px;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.toast.on{opacity:1;transform:translateY(0)}
+.tok{background:#12B76A;color:#fff}.ter{background:#F04438;color:#fff}.tinf{background:#1B2436;color:#fff}
+
+/* Spinner */
+.sp{width:20px;height:20px;border:3px solid var(--bd);border-top-color:var(--pr);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spw{display:flex;align-items:center;justify-content:center;padding:36px;gap:10px;color:var(--mu);flex-direction:column}
+
+/* ═══ Modern KPI components (shared across every page) ═══ */
+.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:18px}
+.hero-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px;display:flex;align-items:flex-start;gap:14px;box-shadow:var(--sh);transition:.15s}
+.hero-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,30,60,.08)}
+.hero-ic{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.hero-ic.gn{background:var(--gn2);color:var(--gn)}.hero-ic.rd{background:var(--rd2);color:var(--rd)}
+.hero-ic.bl{background:var(--pr2);color:var(--pr)}.hero-ic.am{background:var(--yw2);color:var(--yw)}
+.hero-ic.pu{background:var(--pu2);color:var(--pu)}.hero-ic.or{background:var(--or2);color:var(--or)}
+.hero-body{flex:1;min-width:0}
+.hero-l{font-size:10.5px;font-weight:800;color:#8993A6;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.hero-v{font-size:24px;font-weight:800;line-height:1.15;letter-spacing:-.4px}
+.hero-sub{font-size:11.5px;color:var(--mu);margin-top:5px;font-weight:600}
+.hero-sub a{color:var(--pr);font-weight:700;text-decoration:none}
+.hero-ring{flex-shrink:0}
+
+/* Compact icon-square stat card (replaces the plain .sl/.sv layout everywhere) */
+.card.stat2{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.stat2-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.stat2-ic.gn{background:var(--gn2);color:var(--gn)}.stat2-ic.rd{background:var(--rd2);color:var(--rd)}
+.stat2-ic.bl{background:var(--pr2);color:var(--pr)}.stat2-ic.am{background:var(--yw2);color:var(--yw)}
+.stat2-ic.pu{background:var(--pu2);color:var(--pu)}.stat2-ic.or{background:var(--or2);color:var(--or)}
+.stat2-body{min-width:0}
+.stat2-v{font-size:17px;font-weight:800;line-height:1.15}
+.stat2-l{font-size:10px;color:var(--mu);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+
+/* Chart panel */
+.chart-panel{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);padding:20px}
+.chart-panel-hd{font-weight:800;font-size:13.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.legend-row{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#5C6577;margin-bottom:9px}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.legend-num{margin-left:auto;font-weight:800;color:var(--tx)}
+/* Flats page: modern info card grid */
+.flat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.flat-info-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;box-shadow:var(--sh);transition:.15s}
+.flat-info-card:hover{border-color:var(--pr);box-shadow:0 10px 24px rgba(20,30,60,.08);transform:translateY(-2px)}
+.flat-info-hd{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.flat-info-ic{width:40px;height:40px;border-radius:11px;background:var(--pr2);color:var(--pr);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.flat-info-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+
+.sumr td{font-weight:800;background:var(--bg)!important;border-top:2px solid var(--bd)}
+
+/* Cache badge */
+.cache-b{font-size:10.5px;color:var(--yw);background:var(--yw2);padding:3px 9px;border-radius:20px;font-weight:700;flex-shrink:0}
+
+/* Two grid */
+.two-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+@media print{
+  body *{visibility:hidden}
+  .print-target,.print-target *{visibility:visible}
+  .print-target{position:absolute;left:0;top:0;width:100%;padding:16px}
+  .print-target table{width:100%;border-collapse:collapse}
+  .print-target th,.print-target td{border:1px solid #ccc;padding:6px 8px;font-size:12px}
+  .print-target th{background:#1A3C5E!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+/* Menu button: hidden on desktop (sidebar always visible), shown only on mobile */
+#menu-btn{display:none}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(10,15,30,.55);z-index:99}
+.sidebar-backdrop.show{display:block}
+
+@media(max-width:768px){
+  :root{--nw:0px}
+  .sidebar{transform:translateX(-242px);transition:transform .25s ease;box-shadow:0 0 30px rgba(0,0,0,.25)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}.fr,.fr.c3,.fr.c4{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr 1fr}.two-grid{grid-template-columns:1fr}
+  .flat-compare{grid-template-columns:1fr!important}
+  .hero-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .hero-card{padding:14px;gap:10px}
+  .hero-v{font-size:19px}
+  .hero-ic{width:38px;height:38px;font-size:17px}
+  .hero-ring svg{width:32px;height:32px}
+  #quick-actions{grid-template-columns:1fr 1fr!important}
+  #menu-btn{display:inline-flex}
+  .topbar{padding:0 12px;gap:6px;height:58px}
+  .topbar-r{gap:4px}
+  .flat-selector-wrap{padding:6px 8px}
+  .flat-selector-wrap select{max-width:70px;font-size:12px}
+  .srch{padding:6px 8px}
+  .srch input{width:60px}
+  .pt{font-size:14px}
+  .content{padding:14px;padding-bottom:76px}
+  .fbar{gap:6px}
+  .bell-wrap{width:34px;height:34px;font-size:16px}
+  .profile-av{width:30px;height:30px;font-size:11.5px}
+
+  /* Bigger tap targets, comfortable spacing */
+  .btn{padding:10px 14px;min-height:40px}
+  .btn.bs{padding:8px 12px;min-height:36px}
+  .nb{padding:12px 11px;font-size:14px}
+  .pill{padding:8px 14px;min-height:34px}
+  th,td{padding:10px 9px}
+
+  /* Modal: near-full-screen on phones, sticky header/footer stay reachable */
+  .bkd{padding:0;align-items:flex-end}
+  .modal{max-width:100%;width:100%;max-height:92vh;border-radius:20px 20px 0 0}
+  .mb{padding:16px}
+  .fg input,.fg select{padding:10px 12px;font-size:14.5px}
+
+  /* Floating Add button becomes a comfortable thumb-reach FAB */
+  #add-btn{position:fixed;right:18px;bottom:18px;z-index:60;border-radius:50%;width:56px;height:56px;padding:0;justify-content:center;box-shadow:0 6px 18px rgba(59,109,240,.4)}
+  #add-tx{display:none}
+  #add-btn i{font-size:22px}
+
+  /* Charts: keep a comfortable, non-squished height */
+  #occTrendCanvas{max-height:170px}
+  .chart-panel{padding:14px}
+}
+@media(max-width:420px){
+  .srch{display:none}
+  .hero-grid{grid-template-columns:1fr}
+  #quick-actions{grid-template-columns:1fr 1fr!important}
+}
+</style>
+
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo">
+    <div class="logo-ic"><i class="ti ti-building-community"></i></div>
+    <div><div class="logo-tx">Mess Manager</div><div class="logo-sub" id="user-badge">v7 — Multi-Flat</div></div>
+  </div>
+  <nav class="nav">
+    <div class="ns">Main</div>
+    <button class="nb on" data-page="dashboard" onclick="goTo('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+    <button class="nb" data-page="flats" onclick="goTo('flats')"><i class="ti ti-building"></i>Flats</button>
+    <button class="nb" data-page="tenants" onclick="goTo('tenants')"><i class="ti ti-users"></i>Tenants</button>
+    <div class="ns">Payments</div>
+    <button class="nb" data-page="payments" onclick="goTo('payments')"><i class="ti ti-credit-card"></i>Rent Payments</button>
+    <button class="nb" data-page="service" onclick="goTo('service')"><i class="ti ti-tool"></i>Service Charge</button>
+    <button class="nb" data-page="advance" onclick="goTo('advance')"><i class="ti ti-coin"></i>Advance Money</button>
+    <div class="ns">Finance</div>
+    <button class="nb" data-page="due" onclick="goTo('due')"><i class="ti ti-alert-circle"></i>Due Tracker</button>
+    <button class="nb" data-page="expenses" onclick="goTo('expenses')"><i class="ti ti-receipt"></i>Expenses</button>
+    <button class="nb" data-page="owners" onclick="goTo('owners')"><i class="ti ti-briefcase"></i>Owner Panel</button>
+    <div class="ns">Team</div>
+    <button class="nb" data-page="users" onclick="goTo('users')"><i class="ti ti-user-cog"></i>Team / PINs</button>
+    <div class="ns">Account</div>
+    <a class="nb" href="/billing" style="display:flex;align-items:center;text-decoration:none">
+      <i class="ti ti-credit-card"></i>Billing<span id="billing-badge" style="margin-left:auto;display:none"></span>
+    </a>
+  </nav>
+  <div class="sf">
+    <button class="nb" onclick="hardSync()"><i class="ti ti-refresh" id="sync-ic"></i><span id="sync-tx">Sync Sheet</span></button>
+    <button class="nb" onclick="toggleDark()"><i class="ti ti-moon" id="dark-ic"></i>Dark Mode</button>
+    <button class="nb" onclick="doLogout()"><i class="ti ti-logout"></i>Logout</button>
+  </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- ══ MAIN ═════════════════════════════════════════════════ -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-l">
+      <button class="btn bs" id="menu-btn" onclick="toggleSidebar()" aria-label="Menu"><i class="ti ti-menu-2"></i></button>
+      <span class="pt" id="pg-title">Dashboard</span>
+      <span class="cache-b" id="cache-b" style="display:none">Cached</span>
+    </div>
+    <div class="topbar-r">
+      <!-- Flat Selector -->
+      <div class="flat-selector-wrap">
+        <i class="ti ti-building"></i>
+        <select id="flat-sel" onchange="onFlatChange()">
+          <option value="ALL">All Flats</option>
+        </select>
+      </div>
+      <div class="srch"><i class="ti ti-search"></i><input type="text" id="gsearch" placeholder="Search..." oninput="debouncedSearch()"></div>
+      <button class="btn bp" id="add-btn" onclick="doAdd()" style="display:none"><i class="ti ti-plus"></i><span id="add-tx">Add</span></button>
+
+      <button class="bell-wrap" title="Notifications" onclick="toast('Notification centre শীঘ্রই আসছে','inf')"><i class="ti ti-bell"></i><span class="bell-dot" id="notif-dot" style="display:none">0</span></button>
+      <div class="profile-av" id="profile-av" title="" onclick="toast(myName+' — '+myRole,'inf')">--</div>
+
+    </div>
+  </header>
+
+  <div id="announcement-slot"></div>
+
+  <div class="content">
+
+  <!-- ══ DASHBOARD ════════════════════════════════════════ -->
+  <div class="page on" id="page-dashboard">
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="d-mon" onchange="renderDash()">
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="d-yr" style="width:72px" onchange="renderDash()">
+      <button class="btn bs" onclick="renderDash()"><i class="ti ti-filter"></i>Apply</button>
+    </div>
+    <!-- Flat comparison (all flats view) -->
+    <div id="flat-compare-section" style="display:none">
+      <div class="stl"><i class="ti ti-building"></i>Flat Overview — Click a flat to filter</div>
+      <div id="flat-compare-grid" class="flat-compare" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
+    </div>
+    <div class="stl"><i class="ti ti-gauge"></i>Overview — <span id="dash-mon-lbl2"></span></div>
+    <div class="hero-grid" id="dash-kpi"></div>
+    <div class="stl"><i class="ti ti-door"></i>Seat Status</div>
+    <div id="seat-wrap"></div>
+    <div class="stl"><i class="ti ti-chart-line"></i>Occupancy Trend — Last 6 Months</div>
+    <div class="chart-panel" style="margin-bottom:11px"><canvas id="occTrendCanvas" height="90"></canvas></div>
+    <div class="stl"><i class="ti ti-home"></i>Rent Summary</div>
+    <div class="cards" id="dash-rent"></div>
+    <div class="stl"><i class="ti ti-tool"></i>Service Charge</div>
+    <div class="cards" id="dash-svc"></div>
+    <div class="stl"><i class="ti ti-coin"></i>Advance Money</div>
+    <div class="cards" id="dash-adv"></div>
+    <div class="two-grid" style="margin-top:4px">
+      <div class="chart-panel">
+        <div class="chart-panel-hd">Rent Status — <span id="dash-mon-lbl"></span></div>
+        <div style="max-width:230px;margin:0 auto"><canvas id="rentStatusCanvas" height="180"></canvas></div>
+        <div id="rent-status-legend" style="margin-top:10px"></div>
+      </div>
+      <div class="chart-panel">
+        <div class="chart-panel-hd">Recent Payments</div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Flat</th><th>Tenant</th><th>Paid ৳</th><th>Due ৳</th><th>Carry</th><th>Status</th></tr></thead>
+        <tbody id="dash-recent"></tbody></table></div>
+      </div>
+    </div>
+    <div class="stl"><i class="ti ti-bolt"></i>Quick Actions</div>
+    <div class="cards" id="quick-actions" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"></div>
+  </div>
+
+  <!-- ══ FLATS ════════════════════════════════════════════ -->
+  <div class="page" id="page-flats">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:9px">
+      <button class="btn bs" onclick="openVacShare()"><i class="ti ti-share"></i> Share Vacant Seats</button>
+    </div>
+    <div class="flat-grid" id="flat-body"></div>
+  </div>
+
+  <!-- ══ TENANTS ══════════════════════════════════════════ -->
+  <div class="page" id="page-tenants">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="pill on" data-tf="All"      onclick="fT('All')">All</button>
+        <button class="pill"    data-tf="Active"   onclick="fT('Active')">Active</button>
+        <button class="pill"    data-tf="Inactive" onclick="fT('Inactive')">Inactive</button>
+        <button class="pill"    data-tf="Left"     onclick="fT('Left')">Left</button>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <div class="sbar"><label>Sort:</label>
+          <button class="sbtn on" data-ts="name-asc"  onclick="sT('name-asc')">A→Z</button>
+          <button class="sbtn"    data-ts="name-desc" onclick="sT('name-desc')">Z→A</button>
+          <button class="sbtn"    data-ts="rent-hi"   onclick="sT('rent-hi')">High Rent</button>
+          <button class="sbtn"    data-ts="rent-lo"   onclick="sT('rent-lo')">Low Rent</button>
+        </div>
+        <div class="srch"><i class="ti ti-search"></i><input type="text" id="t-srch" placeholder="Search..." oninput="debouncedRenderTenants()"></div>
+      </div>
+    </div>
+    <div class="card tw">
+      <table><thead><tr><th>Flat</th><th>ID</th><th>Name</th><th>Room</th><th>Phone</th><th>Rent ৳</th><th>Service ৳</th><th>Advance ৳</th><th>Entry</th><th>Left Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="t-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ RENT PAYMENTS ════════════════════════════════════ -->
+  <div class="page" id="page-payments">
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="rp-mon" onchange="renderRentPays()">
+        <option value="">All</option>
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="rp-yr" style="width:72px" onchange="renderRentPays()">
+      <div style="display:flex;gap:4px">
+        <button class="pill on" data-rpf="All"     onclick="fRP('All')">All</button>
+        <button class="pill"    data-rpf="Paid"    onclick="fRP('Paid')">Paid</button>
+        <button class="pill"    data-rpf="Partial" onclick="fRP('Partial')">Partial</button>
+        <button class="pill"    data-rpf="Unpaid"  onclick="fRP('Unpaid')">Unpaid</button>
+      </div>
+      <div class="sbar" style="margin-left:auto"><label>Sort:</label>
+        <button class="sbtn on" data-rps="date-desc" onclick="sRP('date-desc')">Latest</button>
+        <button class="sbtn"    data-rps="date-asc"  onclick="sRP('date-asc')">Oldest</button>
+        <button class="sbtn"    data-rps="due-hi"    onclick="sRP('due-hi')">High Due</button>
+        <button class="sbtn"    data-rps="name-asc"  onclick="sRP('name-asc')">Name</button>
+      </div>
+    </div>
+    <div class="card tw">
+      <table><thead><tr><th>Date</th><th>Flat</th><th>Tenant</th><th>Room</th><th>Month/Yr</th><th>Rent ৳</th><th>Carry ৳</th><th>Paid ৳</th><th>Month Total ৳</th><th>Due ৳</th><th>Method</th><th>Receipt</th><th>Status</th><th>Del</th></tr></thead>
+      <tbody id="rp-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ SERVICE CHARGE ═══════════════════════════════════ -->
+  <div class="page" id="page-service">
+    <div id="svc-ov" class="card ov-card" style="margin-bottom:11px;grid-template-columns:1fr 1fr 1fr 1fr"></div>
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="svc-mon" onchange="renderSvcPays()">
+        <option value="">All</option>
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="svc-yr" style="width:72px" placeholder="Year" onchange="renderSvcPays()">
+      <div style="display:flex;gap:4px">
+        <button class="pill on" data-svcf="All"     onclick="fSVC('All')">All</button>
+        <button class="pill"    data-svcf="Paid"    onclick="fSVC('Paid')">Paid</button>
+        <button class="pill"    data-svcf="Partial" onclick="fSVC('Partial')">Partial</button>
+        <button class="pill"    data-svcf="Unpaid"  onclick="fSVC('Unpaid')">Unpaid</button>
+      </div>
+      <div class="sbar" style="margin-left:auto"><label>Sort:</label>
+        <button class="sbtn on" data-svcs="date-desc" onclick="sSVC('date-desc')">Latest</button>
+        <button class="sbtn"    data-svcs="due-hi"    onclick="sSVC('due-hi')">High Due</button>
+        <button class="sbtn"    data-svcs="name-asc"  onclick="sSVC('name-asc')">Name</button>
+      </div>
+    </div>
+    <div class="card tw">
+      <table><thead><tr><th>Date</th><th>Flat</th><th>Tenant</th><th>Total ৳</th><th>This Entry ৳</th><th>Total Paid ৳</th><th>Remaining ৳</th><th>Method</th><th>Receipt</th><th>Status</th><th>Del</th></tr></thead>
+      <tbody id="svc-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ ADVANCE MONEY ═════════════════════════════════════ -->
+  <div class="page" id="page-advance">
+    <div id="adv-ov" class="card ov-card" style="margin-bottom:11px;grid-template-columns:1fr 1fr 1fr"></div>
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="adv-mon" onchange="renderAdvPays()">
+        <option value="">All</option>
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="adv-yr" style="width:72px" placeholder="Year" onchange="renderAdvPays()">
+      <div style="display:flex;gap:4px">
+        <button class="pill on" data-advf="All"     onclick="fADV('All')">All</button>
+        <button class="pill"    data-advf="Paid"    onclick="fADV('Paid')">Paid</button>
+        <button class="pill"    data-advf="Partial" onclick="fADV('Partial')">Partial</button>
+        <button class="pill"    data-advf="Unpaid"  onclick="fADV('Unpaid')">Unpaid</button>
+      </div>
+      <div class="sbar" style="margin-left:auto"><label>Sort:</label>
+        <button class="sbtn on" data-advs="date-desc" onclick="sADV('date-desc')">Latest</button>
+        <button class="sbtn"    data-advs="due-hi"    onclick="sADV('due-hi')">High Due</button>
+        <button class="sbtn"    data-advs="name-asc"  onclick="sADV('name-asc')">Name</button>
+      </div>
+    </div>
+    <div class="card tw">
+      <table><thead><tr><th>Date</th><th>Flat</th><th>Tenant</th><th>Total ৳</th><th>This Entry ৳</th><th>Total Paid ৳</th><th>Remaining ৳</th><th>Method</th><th>Receipt</th><th>Status</th><th>Del</th></tr></thead>
+      <tbody id="adv-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ DUE TRACKER ══════════════════════════════════════ -->
+  <div class="page" id="page-due">
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="due-mon" onchange="renderDue()">
+        <option value="">All</option>
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="due-yr" style="width:72px" onchange="renderDue()">
+      <div class="sbar" style="margin-left:auto"><label>Sort:</label>
+        <button class="sbtn on" data-dues="due-hi"   onclick="sDUE('due-hi')">High Due</button>
+        <button class="sbtn"    data-dues="due-lo"   onclick="sDUE('due-lo')">Low Due</button>
+        <button class="sbtn"    data-dues="name-asc" onclick="sDUE('name-asc')">Name</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-dt="rent"    onclick="switchDueTab('rent')"><i class="ti ti-home"></i>Rent Due</button>
+      <button class="tab"    data-dt="service" onclick="switchDueTab('service')"><i class="ti ti-tool"></i>Service Due</button>
+      <button class="tab"    data-dt="advance" onclick="switchDueTab('advance')"><i class="ti ti-coin"></i>Advance Due</button>
+    </div>
+    <div class="cards" id="due-cards"></div>
+    <div class="card">
+      <div class="sh_"><span class="st_" id="due-tab-title">Rent Due</span></div>
+      <div class="tw"><table><thead id="due-thead"></thead><tbody id="due-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ══ EXPENSES ════════════════════════════════════════ -->
+  <div class="page" id="page-expenses">
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="exp-mon" onchange="renderExpenses()"><option value="">All</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
+      <input type="number" id="exp-yr" style="width:72px" onchange="renderExpenses()">
+      <div class="sbar" style="margin-left:auto">
+        <label>Source:</label>
+        <button class="pill on" data-expf="All" onclick="fExp('All')">All</button>
+        <button class="pill" data-expf="Service Charge" onclick="fExp('Service Charge')">Service Charge</button>
+        <button class="pill" data-expf="Owner Pocket" onclick="fExp('Owner Pocket')">Owner Pocket</button>
+        <button class="pill" data-expf="Advance Money" onclick="fExp('Advance Money')">Advance Money</button>
+      </div>
+    </div>
+    <div id="exp-cards"></div>
+    <div class="card">
+      <div class="sh_">
+        <span class="st_">Expenses</span>
+        <button class="btn bp bs" onclick="openExpModal()"><i class="ti ti-plus"></i> Add Expense</button>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>Date</th><th>Flat</th><th>Title</th><th>Source</th><th>Amount ৳</th><th>Notes</th><th>Del</th></tr></thead>
+        <tbody id="exp-body"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ OWNER PANEL ══════════════════════════════════════ -->
+  <div class="page" id="page-owners">
+    <div class="fbar">
+      <label>Month:</label>
+      <select id="own-mon" onchange="renderOwners()">
+        <option value="">All</option>
+        <option>January</option><option>February</option><option>March</option><option>April</option>
+        <option>May</option><option>June</option><option>July</option><option>August</option>
+        <option>September</option><option>October</option><option>November</option><option>December</option>
+      </select>
+      <input type="number" id="own-yr" style="width:72px" placeholder="Year" onchange="renderOwners()">
+      <button class="btn bs" onclick="document.getElementById('own-mon').value='';document.getElementById('own-yr').value='';renderOwners()"><i class="ti ti-x"></i> Clear</button>
+      <button class="btn bs" style="margin-left:auto" onclick="printOwnerStatement()"><i class="ti ti-printer"></i> Print Statement</button>
+    </div>
+    <div id="own-cards"></div>
+    <!-- Per-flat breakdown -->
+    <div id="flat-profit-section" style="margin-bottom:11px"></div>
+    <div class="two-grid">
+      <div class="card">
+        <div class="sh_">
+          <span class="st_">Flat Rent Payments to Owner</span>
+          <button class="btn bp bs" onclick="openOwnerPayModal()"><i class="ti ti-plus"></i> Add</button>
+        </div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Flat</th><th>Month/Yr</th><th>Flat Rent ৳</th><th>Paid ৳</th><th>Method</th><th>Notes</th><th>Del</th></tr></thead>
+        <tbody id="own-pay-body"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="sh_">
+          <span class="st_">Investments</span>
+          <button class="btn bp bs" onclick="openInvModal()"><i class="ti ti-plus"></i> Add</button>
+        </div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Flat</th><th>Title</th><th>Amount ৳</th><th>Notes</th><th>Del</th></tr></thead>
+        <tbody id="inv-body"></tbody></table></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:11px">
+      <div class="sh_">
+        <span class="st_">Owner Advance Money — flat নেওয়ার সময় owner-কে দেওয়া advance (last month rent এখান থেকে adjust হবে)</span>
+        <button class="btn bp bs" onclick="openOwnerAdvModal()"><i class="ti ti-plus"></i> Add</button>
+      </div>
+      <div class="tw"><table><thead><tr><th>Date</th><th>Flat</th><th>Amount ৳</th><th>Method</th><th>Notes</th><th>Actions</th></tr></thead>
+      <tbody id="oa-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ══ USERS / TEAM (Admin only) ══════════════════════════ -->
+  <div class="page" id="page-users">
+    <div class="ibox inf"><i class="ti ti-info-circle" style="flex-shrink:0;margin-top:1px"></i><div>Management-দের ফোন নম্বর ও PIN দিন — তারা নিজেদের নম্বর দিয়ে সরাসরি লগইন করে শুধু নির্দিষ্ট Flat-এর Tenant/Rent/Service/Advance দেখতে ও এন্ট্রি করতে পারবে। Owner Panel, Expenses, Investments, Reports শুধু Admin দেখবে।</div></div>
+    <div class="card tw">
+      <table><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Flats Access</th><th>Actions</th></tr></thead>
+      <tbody id="users-body"></tbody></table>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ══ FLAT MODAL ════════════════════════════════════════════ -->
+<div class="bkd" id="m-flat" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="mh"><h3 id="flat-modal-title">Add Flat</h3><button class="btn bs" onclick="closeM('m-flat')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Flat ID *</label><input id="f-id" placeholder="F001"><div class="hint">e.g. F001, F002</div></div><div class="fg"><label>Flat Name *</label><input id="f-name" placeholder="Green Tower - A"></div></div>
+      <div class="fr c1"><div class="fg"><label>Address</label><input id="f-addr" placeholder="House 5, Road 3, Dhaka"></div></div>
+      <div class="fr"><div class="fg"><label>Owner Name</label><input id="f-owner" placeholder="Owner name"></div><div class="fg"><label>Monthly Flat Rent ৳</label><input id="f-rent" type="number" placeholder="23000"></div></div>
+      <div class="fr"><div class="fg"><label>Total Rooms</label><input id="f-rooms" type="number" placeholder="11" oninput="onRoomCountChange()"></div><div class="fg"><label>Total Seats</label><input id="f-seats" type="number" placeholder="22" oninput="updateSeatSumHint()"></div></div>
+      <div class="fg" style="margin-bottom:9px">
+        <label>Room ও Seat-এর নাম দিন</label>
+        <div class="hint" id="seat-sum-hint" style="margin-bottom:5px"></div>
+        <div id="f-rooms-builder"></div>
+      </div>
+      <div class="fr c1"><div class="fg"><label>Notes</label><input id="f-notes" placeholder="Optional"></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-flat')">Cancel</button><button class="btn bp" id="save-f" onclick="saveFlat()"><i class="ti ti-check"></i> Save Flat</button></div>
+  </div>
+</div>
+
+<!-- ══ TENANT MODAL ══════════════════════════════════════════ -->
+<div class="bkd" id="m-ten" style="display:none">
+  <div class="modal">
+    <div class="mh"><h3 id="tm-ttl">Add Tenant</h3><button class="btn bs" onclick="closeM('m-ten')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Flat *</label><select id="t-flat" onchange="onTenantFlatChange()"><option value="">-- Select Flat --</option></select></div><div class="fg"><label>Tenant ID *</label><input id="ti" placeholder="T001"><div class="hint">Unique across all flats</div></div></div>
+      <div class="fr"><div class="fg"><label>Full Name *</label><input id="tn" placeholder="Name"></div><div class="fg" id="t-room-manual-wrap" style="display:none"><label>Room/Seat</label><input id="tr_" placeholder="101"><div class="hint">এই Flat-এর জন্য এখনো Room/Seat তৈরি করা হয়নি — Flats page থেকে করুন</div></div></div>
+      <div class="fr" id="t-room-select-wrap"><div class="fg"><label>Room *</label><select id="t-room-sel" onchange="onTenantRoomChange()"><option value="">-- আগে Flat বেছে নিন --</option></select></div><div class="fg"><label>Seat *</label><select id="t-seat-sel"><option value="">-- Select Seat --</option></select></div></div>
+      <div class="fr c3"><div class="fg"><label>Phone</label><input id="tp" placeholder="01711-000000"></div><div class="fg"><label>Monthly Rent ৳</label><input id="trnt" type="number" placeholder="5000"></div><div class="fg"><label>Status</label><select id="ts" onchange="toggleLeftDate()"><option>Active</option><option>Inactive</option><option>Left</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Service Charge ৳</label><input id="tsvc" type="number" placeholder="1000"></div><div class="fg"><label>Advance Due ৳</label><input id="tadv" type="number" placeholder="2500"></div></div>
+      <div class="fr"><div class="fg"><label>Entry Date</label><input id="tent" type="date"></div><div class="fg" id="left-date-grp" style="display:none"><label>Left Date</label><input id="tleft" type="date"></div></div>
+      <div class="fr c1"><div class="fg"><label>Notes</label><input id="tnote" placeholder="Optional"></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-ten')">Cancel</button><button class="btn bp" id="save-t" onclick="saveTenant()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ RENT PAYMENT MODAL ════════════════════════════════════ -->
+<div class="bkd" id="m-rent" style="display:none">
+  <div class="modal">
+    <div class="mh"><h3>Add Rent Payment</h3><button class="btn bs" onclick="closeM('m-rent')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="rpd" type="date"></div><div class="fg"><label>Month</label><select id="rpm" onchange="refreshRP()"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Year</label><input id="rpy" type="number" onchange="refreshRP()"></div><div class="fg"><label>Tenant (Active only) *</label><select id="rptid" onchange="refreshRP()"><option value="">-- Select --</option></select></div></div>
+      <div class="fr c3"><div class="fg"><label>Name (auto)</label><input id="rpname" readonly></div><div class="fg"><label>Room (auto)</label><input id="rproom" readonly></div><div class="fg"><label>Rent (auto) ৳</label><input id="rprent" readonly></div></div>
+      <div id="carry-box" class="ibox pur" style="display:none"><i class="ti ti-arrow-forward" style="flex-shrink:0;margin-top:1px"></i><div id="carry-tx"></div></div>
+      <div id="rp-ibox" class="ibox inf" style="display:none"><i class="ti ti-info-circle" style="flex-shrink:0;margin-top:1px"></i><div id="rp-ibox-tx"></div></div>
+      <div class="fr c3"><div class="fg"><label>Already Paid ৳</label><input id="rpalr" readonly></div><div class="fg"><label>Carry Fwd ৳</label><input id="rpcarry" readonly></div><div class="fg"><label>Effective Due ৳</label><input id="rpeff" readonly></div></div>
+      <div class="fr c3"><div class="fg"><label>Paying Now ৳ *</label><input id="rppay" type="number" placeholder="0" oninput="calcRP()"></div><div class="fg"><label>New Due ৳</label><input id="rpndue" readonly></div><div class="fg"><label>Status</label><input id="rpstat" readonly></div></div>
+      <div class="fr c1"><div class="fg"><label>Method</label><select id="rpmeth"><option>Cash</option><option>bKash</option><option>Nagad</option><option>Rocket</option><option>Bank Transfer</option><option>Cheque</option></select></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-rent')">Cancel</button><button class="btn bp" id="save-rp" onclick="saveRP()"><i class="ti ti-check"></i> Save Payment</button></div>
+  </div>
+</div>
+
+<!-- ══ SERVICE MODAL ════════════════════════════════════════ -->
+<div class="bkd" id="m-svc" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="mh"><h3>Service Charge Payment</h3><button class="btn bs" onclick="closeM('m-svc')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="spd" type="date"></div><div class="fg"><label>Tenant *</label><select id="sptid" onchange="refreshSVC()"><option value="">-- Select --</option></select></div></div>
+      <div id="svc-ibox" class="ibox inf" style="display:none"><i class="ti ti-info-circle" style="flex-shrink:0"></i><div id="svc-ibox-tx"></div></div>
+      <div class="fr c3"><div class="fg"><label>Total ৳</label><input id="sptot" readonly></div><div class="fg"><label>Paid ৳</label><input id="spalr" readonly></div><div class="fg"><label>Remaining ৳</label><input id="sprem" readonly></div></div>
+      <div class="fr"><div class="fg"><label>Paying Now ৳ *</label><input id="sppay" type="number" placeholder="0" oninput="calcSVC()"></div><div class="fg"><label>Status</label><input id="spstat" readonly></div></div>
+      <div class="fr c1"><div class="fg"><label>Method</label><select id="spmeth"><option>Cash</option><option>bKash</option><option>Nagad</option><option>Rocket</option><option>Bank Transfer</option></select></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-svc')">Cancel</button><button class="btn bp" id="save-sp" onclick="saveSVC()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ ADVANCE MODAL ════════════════════════════════════════ -->
+<div class="bkd" id="m-adv" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="mh"><h3>Advance Money Payment</h3><button class="btn bs" onclick="closeM('m-adv')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="apd" type="date"></div><div class="fg"><label>Tenant *</label><select id="aptid" onchange="refreshADV()"><option value="">-- Select --</option></select></div></div>
+      <div id="adv-ibox" class="ibox inf" style="display:none"><i class="ti ti-info-circle" style="flex-shrink:0"></i><div id="adv-ibox-tx"></div></div>
+      <div class="fr c3"><div class="fg"><label>Total ৳</label><input id="aptot" readonly></div><div class="fg"><label>Paid ৳</label><input id="apalr" readonly></div><div class="fg"><label>Remaining ৳</label><input id="aprem" readonly></div></div>
+      <div class="fr"><div class="fg"><label>Paying Now ৳ *</label><input id="appay" type="number" placeholder="0" oninput="calcADV()"></div><div class="fg"><label>Status</label><input id="apstat" readonly></div></div>
+      <div class="fr c1"><div class="fg"><label>Method</label><select id="apmeth"><option>Cash</option><option>bKash</option><option>Nagad</option><option>Rocket</option><option>Bank Transfer</option></select></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-adv')">Cancel</button><button class="btn bp" id="save-ap" onclick="saveADV()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ EXPENSE MODAL ════════════════════════════════════════ -->
+<div class="bkd" id="m-exp" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><h3>Add Service Expense</h3><button class="btn bs" onclick="closeM('m-exp')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="exd" type="date"></div><div class="fg"><label>Flat</label><select id="ex-flat"><option value="">-- Select Flat --</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Title *</label><input id="extitle" placeholder="Cleaner, Lift, Water..."></div><div class="fg"><label>Amount ৳ *</label><input id="examt" type="number" placeholder="500"></div></div>
+      <div class="fr"><div class="fg"><label>Source *</label><select id="exsrc"><option value="Service Charge">Service Charge (tenant-দের collection থেকে)</option><option value="Owner Pocket">Owner Pocket (নিজের পকেট থেকে)</option><option value="Advance Money">Advance Money (tenant-দের advance money collection থেকে)</option></select></div><div class="fg"><label>Notes</label><input id="exnote" placeholder="Optional..."></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-exp')">Cancel</button><button class="btn bp" id="save-ex" onclick="saveExp()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ OWNER PAY MODAL ══════════════════════════════════════ -->
+<div class="bkd" id="m-opay" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="mh"><h3>Flat Rent Payment to Owner</h3><button class="btn bs" onclick="closeM('m-opay')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="opd" type="date"></div><div class="fg"><label>Flat *</label><select id="op-flat"><option value="">-- Select Flat --</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Month</label><select id="opm"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div><div class="fg"><label>Year</label><input id="opy" type="number"></div></div>
+      <div class="fr"><div class="fg"><label>Flat Rent ৳</label><input id="opflat" type="number" placeholder="23000"></div><div class="fg"><label>Amount Paid ৳ *</label><input id="oppaid" type="number" placeholder="23000"></div></div>
+      <div class="fr"><div class="fg"><label>Method</label><select id="opmeth"><option>Cash</option><option>bKash</option><option>Bank Transfer</option></select></div><div class="fg"><label>Notes</label><input id="opnote" placeholder="Optional"></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-opay')">Cancel</button><button class="btn bp" id="save-op" onclick="saveOwnerPay()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ INVESTMENT MODAL ══════════════════════════════════════ -->
+<div class="bkd" id="m-inv" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><h3>Add Investment</h3><button class="btn bs" onclick="closeM('m-inv')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Date</label><input id="invd" type="date"></div><div class="fg"><label>Flat</label><select id="inv-flat"><option value="">-- Select Flat --</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Title *</label><input id="invtitle" placeholder="Paint, Fan, Bed..."></div><div class="fg"><label>Amount ৳ *</label><input id="invamt" type="number" placeholder="5000"></div></div>
+      <div class="fr c1"><div class="fg"><label>Notes</label><input id="invnote" placeholder="Optional..."></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-inv')">Cancel</button><button class="btn bp" id="save-inv" onclick="saveInv()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ OWNER ADVANCE MONEY MODAL ═══════════════════════════════ -->
+<div class="bkd" id="m-oadv" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><h3 id="oadv-modal-title">Add Owner Advance</h3><button class="btn bs" onclick="closeM('m-oadv')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="ibox pur"><i class="ti ti-info-circle" style="flex-shrink:0;margin-top:1px"></i><div>Flat নেওয়ার সময় Owner-কে যে Advance Money (security হিসেবে extra ১ মাসের রেন্ট) দেওয়া হয়েছে সেটা এখানে যোগ করুন। Flat ছাড়ার সময় শেষ মাসের owner rent payment থেকে এটা adjust হয়ে যাবে।</div></div>
+      <div class="fr"><div class="fg"><label>Date</label><input id="oad" type="date"></div><div class="fg"><label>Flat *</label><select id="oa-flat"><option value="">-- Select Flat --</option></select></div></div>
+      <div class="fr"><div class="fg"><label>Amount ৳ *</label><input id="oaamt" type="number" placeholder="20000"></div><div class="fg"><label>Method</label><select id="oameth"><option>Cash</option><option>bKash</option><option>Nagad</option><option>Rocket</option><option>Bank Transfer</option></select></div></div>
+      <div class="fr c1"><div class="fg"><label>Notes</label><input id="oanote" placeholder="Optional..."></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-oadv')">Cancel</button><button class="btn bp" id="save-oa" onclick="saveOwnerAdv()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ TENANT LEDGER MODAL (Feature 4) ═══════════════════════ -->
+<div class="bkd" id="m-ledger" style="display:none">
+  <div class="modal" style="max-width:640px">
+    <div class="mh"><h3 id="ledger-title">Payment History</h3><button class="btn bs" onclick="closeM('m-ledger')"><i class="ti ti-x"></i></button></div>
+    <div class="mb" id="ledger-body" style="padding:0"></div>
+    <div class="mf"><button class="btn" onclick="closeM('m-ledger')">Close</button></div>
+  </div>
+</div>
+
+<!-- ══ SETTLE & EXIT MODAL (Feature 6) ════════════════════════ -->
+<div class="bkd" id="m-settle" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><h3>Settle & Exit</h3><button class="btn bs" onclick="closeM('m-settle')"><i class="ti ti-x"></i></button></div>
+    <div class="mb" id="settle-body"></div>
+    <div class="mf"><button class="btn" onclick="closeM('m-settle')">Cancel</button><button class="btn bd_" id="confirm-settle-btn" onclick="confirmSettle()"><i class="ti ti-door-exit"></i> Confirm Exit</button></div>
+  </div>
+</div>
+
+<!-- ══ RECEIPT MODAL (Feature 7) ═══════════════════════════════ -->
+<div class="bkd" id="m-receipt" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div class="mh"><h3>Receipt</h3><button class="btn bs" onclick="closeM('m-receipt')"><i class="ti ti-x"></i></button></div>
+    <div class="mb" id="receipt-body" style="padding:0"></div>
+    <div class="mf" style="justify-content:space-between">
+      <button class="btn" onclick="closeM('m-receipt')">Close</button>
+      <div style="display:flex;gap:6px">
+        <a class="btn" id="receipt-wa-btn" href="#" target="_blank" rel="noopener" style="background:#25D366;color:#fff;border-color:#25D366"><i class="ti ti-brand-whatsapp"></i> Share</a>
+        <button class="btn bp" onclick="printReceipt()"><i class="ti ti-printer"></i> Print / PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VACANT SEAT SHARE MODAL (Feature 8) ═════════════════════ -->
+<div class="bkd" id="m-vacshare" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><h3>Vacant Seats — Share</h3><button class="btn bs" onclick="closeM('m-vacshare')"><i class="ti ti-x"></i></button></div>
+    <div class="mb"><textarea id="vacshare-text" rows="12" style="width:100%;background:var(--bg);border:1.5px solid var(--bd);border-radius:7px;padding:10px;font-family:inherit;font-size:12.5px;color:var(--tx)" readonly></textarea></div>
+    <div class="mf"><button class="btn" onclick="closeM('m-vacshare')">Close</button><button class="btn bp" onclick="copyVacShare()"><i class="ti ti-copy"></i> Copy Text</button></div>
+  </div>
+</div>
+
+<!-- ══ OWNER STATEMENT MODAL ═══════════════════════════════════ -->
+<div class="bkd" id="m-own-stmt" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="mh"><h3>Owner Statement</h3><button class="btn bs" onclick="closeM('m-own-stmt')"><i class="ti ti-x"></i></button></div>
+    <div class="mb" id="own-stmt-body" style="padding:0"></div>
+    <div class="mf"><button class="btn" onclick="closeM('m-own-stmt')">Close</button><button class="btn bp" onclick="window.print()"><i class="ti ti-printer"></i> Print / PDF</button></div>
+  </div>
+</div>
+
+<!-- ══ USER MODAL ══════════════════════════════════════════ -->
+<div class="bkd" id="m-user" style="display:none">
+  <div class="modal" style="max-width:540px">
+    <div class="mh"><h3 id="user-modal-title">Add User</h3><button class="btn bs" onclick="closeM('m-user')"><i class="ti ti-x"></i></button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Name *</label><input id="u-name" placeholder="Management name"></div><div class="fg"><label>Phone *</label><input id="u-phone" placeholder="01XXXXXXXXX" maxlength="11"></div></div>
+      <div class="fr"><div class="fg"><label>PIN (4-6 digit) <span id="u-pin-req">*</span></label><input id="u-pin" inputmode="numeric" maxlength="6" placeholder="1234"></div><div class="fg"><label>Role</label><select id="u-role" onchange="toggleUserFlats()"><option value="Management">Management</option><option value="Admin">Admin</option></select></div></div>
+      <div class="hint" style="margin:-6px 0 10px">উনি এই ফোন নম্বর ও PIN দিয়ে সরাসরি /login থেকে ঢুকতে পারবেন — কোনো shared PIN স্ক্রিন লাগবে না।</div>
+      <div class="fg" id="u-flats-wrap"><label>Flats Access</label><div id="u-flats-checks" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div></div>
+      <div class="fg" id="u-perms-wrap" style="margin-top:9px">
+        <label>Permissions — কোনটা দেখতে/এডিট/ডিলিট করতে পারবে</label>
+        <div class="hint" style="margin-bottom:4px">Edit/Delete চাপলে View নিজে থেকেই on হয়ে যাবে</div>
+        <div class="tw" style="border:1px solid var(--bd);border-radius:8px;margin-top:2px">
+          <table style="font-size:11.5px"><thead><tr><th>Section</th><th style="text-align:center">View</th><th style="text-align:center">Edit</th><th style="text-align:center">Delete</th></tr></thead>
+          <tbody id="u-perm-rows"></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeM('m-user')">Cancel</button><button class="btn bp" id="save-u" onclick="saveUser()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- ══ LOADING SCREEN (shown briefly while getAllData() runs on first
+     load — identity comes from the session cookie set at /login, so
+     there's no in-app PIN step anymore) ══════════════════════════ -->
+<div class="bkd" id="login-screen" style="display:flex;z-index:500;background:rgba(15,23,42,.88)">
+  <div class="modal" style="max-width:300px">
+    <div class="mb" style="text-align:center;padding:28px 20px">
+      <div class="logo-ic" style="width:44px;height:44px;font-size:20px;margin:0 auto 14px;animation:spin 1s linear infinite"><i class="ti ti-loader-2"></i></div>
+      <p style="color:var(--mu);font-size:13px">লোড হচ্ছে...</p>
+      <div id="login-err" style="color:var(--rd);font-size:11.5px;margin-top:10px;min-height:14px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/gs-shim.js"></script>
+<script src="/billing-banner.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const CACHE_TTL=5*60*1000;
+let DB={flats:[],tenants:[],rentPays:[],svcPays:[],advPays:[],expenses:[],ownerPays:[],investments:[],ownerAdvances:[]};
+let curFlat='ALL'; // current flat filter
+let tenantF='All',rpF='All',svcF='All',advF='All',dueTab='rent',curPage='dashboard',editTId=null,editFlatId=null,editOwnerAdvId=null;
+let sortS={t:'name-asc',rp:'date-desc',svc:'date-desc',adv:'date-desc',due:'due-hi'};
+let myUserId='',myRole='Management',myName='',myFlats=['ALL'],myPerms=null,editUserId=null,editSettleTid=null;
+const PERM_RESOURCES=[['tenants','Tenants'],['flats','Flats'],['rent','Rent Payments'],['service','Service Charge'],['advance','Advance Money'],['expenses','Expenses'],['owners','Owner Panel'],['investments','Investments']];
+
+function cacheKey(){return 'mess_v7';}
+
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const curMon  =()=>MONTHS[new Date().getMonth()];
+const curYr   =()=>new Date().getFullYear();
+const pad2=n=>String(n).padStart(2,'0');
+const dateToISO=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const todayISO=()=>dateToISO(new Date());
+
+function fmtDate(v){if(!v)return'';try{const d=new Date(String(v));if(isNaN(d.getTime()))return String(v);return`${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getFullYear()}`;}catch(e){return String(v);}}
+const N=v=>Number(v)||0;
+const fmt=v=>N(v).toLocaleString('en-IN');
+// Escape user-entered text before inserting into innerHTML templates (XSS hardening).
+// Any free-text field a user can type (name, notes, title, address, phone...) must
+// pass through this before being interpolated into a template string.
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Debounce: search boxes call this instead of re-rendering the whole table on
+// every single keystroke — waits for a short pause in typing (perf/DOM win).
+function debounce(fn,wait){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),wait);};}
+
+// ── Shared modern card components (used by every page's KPI rows) ──
+const CLR_VAR={gn:'--gn',rd:'--rd',bl:'--pr',am:'--yw',pu:'--pu',or:'--or'};
+function statCard(v,l,ic,c){
+  return `<div class="card stat2"><div class="stat2-ic ${c}"><i class="ti ${ic}"></i></div><div class="stat2-body"><div class="stat2-v ${c}">${v}</div><div class="stat2-l">${l}</div></div></div>`;
+}
+function ringSVG(pct,c){
+  const p=Math.max(0,Math.min(100,pct)),r=15,circ=2*Math.PI*r,off=circ-(p/100)*circ;
+  return `<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--bd)" stroke-width="4"/><circle cx="20" cy="20" r="${r}" fill="none" stroke="var(${CLR_VAR[c]||'--pr'})" stroke-width="4" stroke-dasharray="${circ}" stroke-dashoffset="${off}" stroke-linecap="round" transform="rotate(-90 20 20)"/></svg>`;
+}
+function heroCard(ic,c,l,v,ringPct,sub){
+  return `<div class="hero-card">
+    <div class="hero-ic ${c}"><i class="ti ${ic}"></i></div>
+    <div class="hero-body"><div class="hero-l">${l}</div><div class="hero-v">${v}</div>${sub?`<div class="hero-sub">${sub}</div>`:''}</div>
+    ${ringPct!=null?`<div class="hero-ring">${ringSVG(ringPct,c)}</div>`:''}
+  </div>`;
+}
+
+// ── Cache ─────────────────────────────────────────────────
+function saveCache(d){try{localStorage.setItem(cacheKey(),JSON.stringify({ts:Date.now(),d}));}catch(e){}}
+function loadCache(){try{const r=localStorage.getItem(cacheKey());if(!r)return null;const{ts,d}=JSON.parse(r);return Date.now()-ts>CACHE_TTL?null:d;}catch(e){return null;}}
+function clearCache(){try{localStorage.removeItem(cacheKey());}catch(e){}}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg,type='inf',dur=2800){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast on t${type}`;clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',dur);}
+function setBusy(id,busy,def){const b=document.getElementById(id);if(!b)return;b.disabled=busy;if(busy)b.innerHTML='<div class="sp" style="width:12px;height:12px;border-width:2px;margin-right:3px"></div>...';else b.innerHTML=def;}
+function closeM(id){document.getElementById(id).style.display='none';}
+function openM(id){document.getElementById(id).style.display='flex';}
+
+// ── Flat filter helpers ───────────────────────────────────
+function filterByFlat(arr,key='flatId'){
+  if(curFlat==='ALL') return arr;
+  return arr.filter(x=>x[key]===curFlat||!x[key]);
+}
+function activeTenants(){return filterByFlat(DB.tenants).filter(t=>t.status==='Active');}
+function flatName(id){const f=DB.flats.find(x=>x.id===id);return f?f.name:id||'—';}
+
+// ── Navigation ────────────────────────────────────────────
+const PG={dashboard:'Dashboard',flats:'Flats',tenants:'Tenants',payments:'Rent Payments',service:'Service Charge',advance:'Advance Money',due:'Due Tracker',expenses:'Expenses',owners:'Owner Panel',users:'Team / PINs'};
+const PG_ADD={flats:'Add Flat',tenants:'Add Tenant',payments:'Add Payment',service:'Add Payment',advance:'Add Payment',users:'Add User'};
+
+function goTo(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.nb[data-page]').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-'+p).classList.add('on');
+  const btn=document.querySelector('.nb[data-page="'+p+'"]'); if(btn)btn.classList.add('on');
+  document.getElementById('pg-title').textContent=PG[p];
+  curPage=p;
+  const ab=document.getElementById('add-btn');
+  const pageRes=PAGE_RESOURCE[p]||(p==='users'?'users':null);
+  const allowAdd=pageRes==='users'?myRole==='Admin':(pageRes?canEdit(pageRes):true);
+  if(PG_ADD[p]&&allowAdd){ab.style.display='';document.getElementById('add-tx').textContent=PG_ADD[p];}else ab.style.display='none';
+  renderPage(p);
+  if(window.innerWidth<=768)closeSidebar();
+}
+function renderPage(p){
+  if(p==='dashboard')renderDash();
+  else if(p==='flats')renderFlats();
+  else if(p==='tenants')renderTenants();
+  else if(p==='payments')renderRentPays();
+  else if(p==='service')renderSvcPays();
+  else if(p==='advance')renderAdvPays();
+  else if(p==='due')renderDue();
+  else if(p==='expenses')renderExpenses();
+  else if(p==='owners')renderOwners();
+  else if(p==='users')renderUsers();
+}
+function doAdd(){
+  if(curPage==='flats')openAddFlat();
+  else if(curPage==='tenants')openAddTenant();
+  else if(curPage==='payments')openRentPayModal();
+  else if(curPage==='service')openSvcPayModal();
+  else if(curPage==='advance')openAdvPayModal();
+  else if(curPage==='users')openAddUser();
+}
+function onSearch(){renderPage(curPage);}
+const debouncedSearch=debounce(onSearch,220);
+const debouncedRenderTenants=debounce(()=>renderTenants(),220);
+
+// ── Mobile sidebar ──────────────────────────────────────────
+function toggleSidebar(){
+  const open=document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('show',open);
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('show');
+}
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  document.getElementById('dark-ic').className=document.body.classList.contains('dark')?'ti ti-sun':'ti ti-moon';
+  try{localStorage.setItem('mess_dark',document.body.classList.contains('dark')?'1':'0');}catch(e){}
+  if(curPage==='dashboard')renderDash(); // Chart.js reads CSS colors at draw-time, so re-render to pick up the new theme
+}
+
+// ── Flat selector ─────────────────────────────────────────
+function rebuildFlatSelector(){
+  const sel=document.getElementById('flat-sel');
+  const want=(myRole!=='Admin'&&DB.flats.length===1)?DB.flats[0].id:(DB.flats.find(f=>f.id===curFlat)?curFlat:'ALL');
+  sel.innerHTML='<option value="ALL">All Flats</option>';
+  DB.flats.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;sel.appendChild(o);});
+  sel.value=want;
+  curFlat=want;
+}
+function onFlatChange(){
+  curFlat=document.getElementById('flat-sel').value;
+  renderPage(curPage);
+}
+
+// ── Flat options in modals ────────────────────────────────
+function populateFlatDropdowns(){
+  ['t-flat','ex-flat','op-flat','inv-flat','oa-flat'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const prev=el.value;
+    el.innerHTML='<option value="">-- Select Flat --</option>';
+    DB.flats.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;el.appendChild(o);});
+    if(DB.flats.find(f=>f.id===prev))el.value=prev;
+    else if(curFlat!=='ALL'&&DB.flats.find(f=>f.id===curFlat))el.value=curFlat;
+  });
+}
+
+// ── Sync ──────────────────────────────────────────────────
+function refreshFromSheet(showSpin){
+  if(showSpin){document.getElementById('sync-tx').textContent='Loading...';document.getElementById('sync-ic').style.animation='spin .7s linear infinite';}
+  google.script.run
+    .withSuccessHandler(data=>{
+      document.getElementById('sync-tx').textContent='Sync Sheet';document.getElementById('sync-ic').style.animation='';
+      if(data&&data.authError){toast('Session শেষ হয়ে গেছে, আবার login করুন','er');doLogout();return;}
+      if(data&&data.tenants){DB=data;myRole=data._me.role;myName=data._me.name;myFlats=data._me.flats;myPerms=data._me.perms;myUserId=data._me.id;saveCache(data);document.getElementById('cache-b').style.display='none';rebuildFlatSelector();applyRoleUI();}
+      renderPage(curPage);if(showSpin)toast('Data loaded','ok',1500);
+    })
+    .withFailureHandler(e=>{document.getElementById('sync-tx').textContent='Sync Sheet';document.getElementById('sync-ic').style.animation='';toast('Error: '+e,'er');})
+    .getAllData();
+}
+function hardSync(){clearCache();document.getElementById('sync-tx').textContent='Syncing...';document.getElementById('sync-ic').style.animation='spin .7s linear infinite';refreshFromSheet(false);}
+function quickRefresh(){refreshFromSheet(false);}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH — identity comes from the session cookie (set at /login with
+//  phone+PIN). No in-app PIN screen anymore: getAllData() is called
+//  directly and the server figures out who's asking from the cookie.
+// ═══════════════════════════════════════════════════════════
+function bootstrapApp(){
+  document.getElementById('login-screen').style.display='flex';
+  google.script.run.withSuccessHandler(r=>{
+    if(!r){document.getElementById('login-err').textContent='Server error, পেজ রিলোড করুন।';return;}
+    if(r.authError){window.location.href='/login';return;}
+    myRole=r._me.role;myName=r._me.name;myFlats=r._me.flats;myPerms=r._me.perms;myUserId=r._me.id;
+    DB=r;saveCache(r);
+    document.getElementById('login-screen').style.display='none';
+    applyRoleUI();
+    rebuildFlatSelector();
+    renderPage(curPage);
+  }).withFailureHandler(e=>{
+    document.getElementById('login-err').textContent='Connection error: '+e;
+  }).getAllData();
+}
+function doLogout(){
+  fetch('/api/auth/logout',{method:'POST'}).then(()=>{window.location.href='/login';});
+}
+function canView(res){return myRole==='Admin'||(myPerms&&myPerms[res]&&myPerms[res].v);}
+function canEdit(res){return myRole==='Admin'||(myPerms&&myPerms[res]&&myPerms[res].e);}
+function canDelete(res){return myRole==='Admin'||(myPerms&&myPerms[res]&&myPerms[res].d);}
+const PAGE_RESOURCE={flats:'flats',tenants:'tenants',payments:'rent',service:'service',advance:'advance',expenses:'expenses',owners:'owners'};
+function applyRoleUI(){
+  const badge=document.getElementById('user-badge');
+  if(badge)badge.textContent=myName+' • '+(myRole==='Admin'?'Admin':'Management');
+  const pav=document.getElementById('profile-av');
+  if(pav){pav.textContent=(myName||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';pav.title=myName+' ('+(myRole==='Admin'?'Admin':'Management')+')';}
+  document.querySelectorAll('.nb[data-page]').forEach(b=>{
+    const page=b.dataset.page;
+    let show=true;
+    if(page==='users') show=(myRole==='Admin');
+    else if(page==='due') show=canView('rent')||canView('service')||canView('advance');
+    else if(PAGE_RESOURCE[page]) show=canView(PAGE_RESOURCE[page]);
+    b.style.display=show?'':'none';
+  });
+  const rr=document.getElementById('rearrange-btn'); if(rr)rr.style.display=myRole==='Admin'?'':'none';
+}
+
+// ── Calc helpers ──────────────────────────────────────────
+function isTenantActiveInMonth(t,month,year){
+  if(!t||t.status==='Inactive')return false;
+  const mi=MONTHS.indexOf(month);if(mi<0)return false;
+  const yr=N(year),first=new Date(yr,mi,1),last=new Date(yr,mi+1,0);
+  const entry=t.entry?new Date(String(t.entry)):null;
+  if(!entry||isNaN(entry)||entry>last)return false;
+  if(t.status==='Left'||t.leftDate){
+    const left=t.leftDate?new Date(String(t.leftDate)):null;
+    if(left&&!isNaN(left)&&left<first)return false;
+    if((!left||isNaN(left))&&t.status==='Left'){
+      const now=new Date();
+      return first<new Date(now.getFullYear(),now.getMonth(),1);
+    }
+  }
+  return true;
+}
+function getActiveForMonth(month,year,flatId){
+  return DB.tenants.filter(t=>{
+    if(flatId&&flatId!=='ALL'&&t.flatId!==flatId&&t.flatId)return false;
+    return isTenantActiveInMonth(t,month,N(year));
+  });
+}
+function getCarryFwd(tid,month,year){
+  const mi=MONTHS.indexOf(month);if(mi<0)return 0;
+  const prev=MONTHS[mi===0?11:mi-1],prevYr=mi===0?year-1:year;
+  const t=DB.tenants.find(x=>x.id===tid);if(!t)return 0;
+  const rent=N(t.rent);
+  const prevPays=DB.rentPays.filter(p=>p.tid===tid&&p.month===prev&&p.year===N(prevYr));
+  const prevPaid=prevPays.reduce((a,p)=>a+N(p.paid),0);
+  const prevCarry=prevPays.length?N(prevPays[0].carryIn):0;
+  return Math.max(0,prevPaid-Math.max(0,rent-prevCarry));
+}
+function rentMonthSummary(tid,month,year){
+  const t=DB.tenants.find(x=>x.id===tid);
+  if(!t)return{rent:0,paid:0,carryIn:0,effectiveDue:0,due:0,status:'Unpaid'};
+  const rent=N(t.rent),carryIn=getCarryFwd(tid,month,year);
+  const paid=DB.rentPays.filter(p=>p.tid===tid&&p.month===month&&p.year===N(year)).reduce((a,p)=>a+N(p.paid),0);
+  const effDue=Math.max(0,rent-carryIn),due=Math.max(0,effDue-paid);
+  return{rent,paid,carryIn,effectiveDue:effDue,due,status:(paid<=0&&carryIn<=0)?'Unpaid':due===0?'Paid':'Partial'};
+}
+// "All months" cumulative view for the Due Tracker's Rent tab: sums each
+// month's effective due (rent - carry-forward - that month's payments)
+// from the tenant's entry date through the given cutoff month/year, so
+// selecting "All" shows total money owed across their whole stay instead
+// of nothing (MONTHS.indexOf('') === -1 would otherwise make every
+// month-based lookup silently return zero/false).
+function monthsFromEntry(entry,uptoMonth,uptoYear){
+  if(!entry)return[];
+  const e=new Date(String(entry));if(isNaN(e))return[];
+  let mi=e.getMonth(),yr=e.getFullYear();
+  const uptoMi=MONTHS.indexOf(uptoMonth);
+  const out=[];
+  while(yr<uptoYear||(yr===uptoYear&&mi<=uptoMi)){
+    out.push({month:MONTHS[mi],year:yr});
+    mi++;if(mi>11){mi=0;yr++;}
+    if(out.length>240)break; // 20-year safety cap
+  }
+  return out;
+}
+function cumulativeRentSummary(tid){
+  const t=DB.tenants.find(x=>x.id===tid);
+  if(!t)return{rent:0,paid:0,carryIn:0,due:0,status:'Unpaid'};
+  const months=monthsFromEntry(t.entry,curMon(),curYr());
+  let due=0,paid=0;
+  months.forEach(({month,year})=>{const s=rentMonthSummary(tid,month,year);due+=s.due;paid+=s.paid;});
+  return{rent:N(t.rent),paid,carryIn:0,due,status:due<=0?'Paid':(paid>0?'Partial':'Unpaid')};
+}
+function svcSummary(tid){const t=DB.tenants.find(x=>x.id===tid);if(!t)return{total:0,paid:0,due:0,status:'Unpaid'};const total=N(t.serviceCharge),paid=DB.svcPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0),due=Math.max(0,total-paid);return{total,paid,due,status:paid<=0?'Unpaid':due===0?'Paid':'Partial'};}
+function advSummary(tid){const t=DB.tenants.find(x=>x.id===tid);if(!t)return{total:0,paid:0,due:0,status:'Unpaid'};const total=N(t.advanceDue),paid=DB.advPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0),due=Math.max(0,total-paid);return{total,paid,due,status:paid<=0?'Unpaid':due===0?'Paid':'Partial'};}
+
+// ── Sort ──────────────────────────────────────────────────
+function applySort(arr,key){return[...arr].sort((a,b)=>{if(key==='name-asc')return(a.name||'').localeCompare(b.name||'');if(key==='name-desc')return(b.name||'').localeCompare(a.name||'');if(key==='rent-hi')return N(b.rent)-N(a.rent);if(key==='rent-lo')return N(a.rent)-N(b.rent);if(key==='date-desc')return(b.date||'').localeCompare(a.date||'');if(key==='date-asc')return(a.date||'').localeCompare(b.date||'');if(key==='due-hi')return N(b._due||0)-N(a._due||0);if(key==='due-lo')return N(a._due||0)-N(b._due||0);return 0;});}
+function setSortBtn(grp,val){document.querySelectorAll(`[data-${grp}]`).forEach(b=>b.classList.toggle('on',b.dataset[grp]===val));}
+function sT(v){sortS.t=v;setSortBtn('ts',v);renderTenants();}
+function sRP(v){sortS.rp=v;setSortBtn('rps',v);renderRentPays();}
+function sSVC(v){sortS.svc=v;setSortBtn('svcs',v);renderSvcPays();}
+function sADV(v){sortS.adv=v;setSortBtn('advs',v);renderAdvPays();}
+function sDUE(v){sortS.due=v;setSortBtn('dues',v);renderDue();}
+
+// ── Badges ────────────────────────────────────────────────
+function badge(s){const m={Paid:'bgn',Partial:'byw',Unpaid:'brd',Active:'bgn',Inactive:'brd',Left:'bgy'};return`<span class="badge ${m[s]||'bgy'}">${s}</span>`;}
+function rowC(s){const m={Paid:'rp',Partial:'rpa',Unpaid:'ru',Active:'ra',Inactive:'ri',Left:'rl'};return m[s]||'';}
+function ftag(id){const n=flatName(id);return n&&n!=='—'?`<span class="flat-tag">${esc(n)}</span>`:'<span style="color:var(--mu);font-size:11px">—</span>';}
+
+// ═══════════════════════════════════════════════════════════
+//  USERS / TEAM (Admin only)
+// ═══════════════════════════════════════════════════════════
+let usersList=[];
+function renderUsers(){
+  google.script.run.withSuccessHandler(list=>{
+    usersList=list||[];
+    document.getElementById('users-body').innerHTML=usersList.length?usersList.map(u=>`<tr>
+      <td style="font-weight:700">${esc(u.name)}${u.id===myUserId?' <span style="color:var(--mu);font-size:10px">(You)</span>':''}</td>
+      <td>${esc(u.phone||'—')}</td>
+      <td><span class="badge ${u.role==='Admin'?'bbl':'bpu'}">${u.role}</span></td>
+      <td>${(u.role==='Admin'||u.flats.includes('ALL'))?'<span style="color:var(--mu)">All Flats</span>':(u.flats.map(fid=>ftag(fid)).join(' ')||'<span style="color:var(--mu)">—</span>')}</td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn bs" onclick="openEditUser('${u.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn bs bd_" onclick="delUser('${u.id}')"><i class="ti ti-trash"></i></button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--mu)">কোনো user নেই</td></tr>`;
+  }).getUsersForAdmin();
+}
+function toggleUserFlats(){
+  const isAdmin=document.getElementById('u-role').value==='Admin';
+  document.getElementById('u-flats-wrap').style.display=isAdmin?'none':'';
+  document.getElementById('u-perms-wrap').style.display=isAdmin?'none':'';
+}
+function renderUserFlatChecks(selected){
+  document.getElementById('u-flats-checks').innerHTML=DB.flats.length?DB.flats.map(f=>`<button type="button" class="pill${(selected||[]).includes(f.id)?' on':''}" data-fid="${f.id}" onclick="this.classList.toggle('on')">${esc(f.name)}</button>`).join(''):'<span style="color:var(--mu);font-size:12px">আগে একটা Flat যোগ করুন</span>';
+}
+function renderPermGrid(perms){
+  const p=perms||{};
+  document.getElementById('u-perm-rows').innerHTML=PERM_RESOURCES.map(([key,label])=>{
+    const r=p[key]||{v:false,e:false,d:false};
+    return `<tr><td>${label}</td>
+      <td style="text-align:center"><input type="checkbox" data-perm="${key}" data-t="v" ${r.v?'checked':''} onchange="onPermChange(this)"></td>
+      <td style="text-align:center"><input type="checkbox" data-perm="${key}" data-t="e" ${r.e?'checked':''} onchange="onPermChange(this)"></td>
+      <td style="text-align:center"><input type="checkbox" data-perm="${key}" data-t="d" ${r.d?'checked':''} onchange="onPermChange(this)"></td>
+    </tr>`;
+  }).join('');
+}
+function onPermChange(cb){
+  const key=cb.dataset.perm;
+  if((cb.dataset.t==='e'||cb.dataset.t==='d')&&cb.checked){
+    const vBox=document.querySelector(`input[data-perm="${key}"][data-t="v"]`);
+    if(vBox)vBox.checked=true;
+  }
+  if(cb.dataset.t==='v'&&!cb.checked){
+    ['e','d'].forEach(t=>{const box=document.querySelector(`input[data-perm="${key}"][data-t="${t}"]`);if(box)box.checked=false;});
+  }
+}
+function collectPerms(){
+  const out={};
+  PERM_RESOURCES.forEach(([key])=>{
+    out[key]={
+      v:document.querySelector(`input[data-perm="${key}"][data-t="v"]`).checked,
+      e:document.querySelector(`input[data-perm="${key}"][data-t="e"]`).checked,
+      d:document.querySelector(`input[data-perm="${key}"][data-t="d"]`).checked
+    };
+  });
+  return out;
+}
+function defaultPermsClient(){
+  const out={};
+  PERM_RESOURCES.forEach(([key])=>out[key]={v:false,e:false,d:false});
+  ['tenants','rent','service','advance'].forEach(k=>out[k]={v:true,e:true,d:false});
+  return out;
+}
+function openAddUser(){
+  editUserId=null;
+  document.getElementById('user-modal-title').textContent='Add User';
+  document.getElementById('u-name').value='';document.getElementById('u-phone').value='';document.getElementById('u-pin').value='';document.getElementById('u-role').value='Management';
+  document.getElementById('u-pin-req').textContent='*';document.getElementById('u-pin').placeholder='1234';
+  renderUserFlatChecks([]);renderPermGrid(defaultPermsClient());toggleUserFlats();
+  setBusy('save-u',false,'<i class="ti ti-check"></i> Save');openM('m-user');
+}
+function openEditUser(id){
+  const u=usersList.find(x=>x.id===id);if(!u)return;
+  editUserId=id;
+  document.getElementById('user-modal-title').textContent='Edit User';
+  document.getElementById('u-name').value=u.name;document.getElementById('u-phone').value=u.phone||'';document.getElementById('u-pin').value='';document.getElementById('u-role').value=u.role;
+  document.getElementById('u-pin-req').textContent='(optional)';document.getElementById('u-pin').placeholder='একই রাখতে ফাঁকা রাখুন';
+  renderUserFlatChecks(u.flats||[]);renderPermGrid(u.perms||defaultPermsClient());toggleUserFlats();
+  setBusy('save-u',false,'<i class="ti ti-check"></i> Update');openM('m-user');
+}
+function saveUser(){
+  const name=document.getElementById('u-name').value.trim(),phone=document.getElementById('u-phone').value.trim(),pin=document.getElementById('u-pin').value.trim(),role=document.getElementById('u-role').value;
+  if(!name||!/^01\d{9}$/.test(phone)){toast('Name ও সঠিক ১১ ডিজিট Phone number দিন','er');return;}
+  if(!editUserId&&!/^\d{4,6}$/.test(pin)){toast('নতুন user-এর জন্য 4-6 digit PIN দিন','er');return;}
+  if(editUserId&&pin&&!/^\d{4,6}$/.test(pin)){toast('PIN 4-6 digit হতে হবে','er');return;}
+  const flats=role==='Admin'?['ALL']:Array.from(document.querySelectorAll('#u-flats-checks .pill.on')).map(b=>b.dataset.fid);
+  if(role==='Management'&&!flats.length){toast('অন্তত একটা Flat select করুন','er');return;}
+  const perms=role==='Admin'?null:collectPerms();
+  setBusy('save-u',true,'');
+  const done=r=>{
+    setBusy('save-u',false,'<i class="ti ti-check"></i> Save');
+    if(r.success){toast(r.message,'ok');closeM('m-user');renderUsers();} else toast(r.message,'er');
+  };
+  const fail=e=>{setBusy('save-u',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');};
+  if(editUserId) google.script.run.withSuccessHandler(done).withFailureHandler(fail).updateUser({id:editUserId,phone,pin,name,role,flats,perms});
+  else google.script.run.withSuccessHandler(done).withFailureHandler(fail).addUser({phone,pin,name,role,flats,perms});
+}
+function delUser(id){
+  if(id===myUserId){toast('নিজের একাউন্ট নিজে ডিলিট করতে পারবেন না','er');return;}
+  if(!confirm('এই user ডিলিট করবেন?'))return;
+  google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');renderUsers();}else toast(r.message,'er');}).deleteUser(id);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDash(){
+  const mon=document.getElementById('d-mon').value||curMon();
+  const yr=N(document.getElementById('d-yr').value)||curYr();
+  document.getElementById('dash-mon-lbl').textContent=`${mon} ${yr}`;
+
+  // ── Flat comparison cards (All Flats only) ─────────────
+  const flatCompSection=document.getElementById('flat-compare-section');
+  if(curFlat==='ALL'&&DB.flats.length>1){
+    flatCompSection.style.display='';
+    document.getElementById('flat-compare-grid').innerHTML=DB.flats.map(f=>{
+      const fTenants=getActiveForMonth(mon,yr,f.id);
+      const fColl=DB.rentPays.filter(p=>p.flatId===f.id&&p.month===mon&&p.year===yr).reduce((a,p)=>a+N(p.paid),0);
+      const fDue=fTenants.reduce((a,t)=>a+rentMonthSummary(t.id,mon,yr).due,0);
+      return`<div class="flat-card" onclick="document.getElementById('flat-sel').value='${f.id}';onFlatChange()">
+        <div class="flat-card-name"><span class="flat-tag">${esc(f.name)}</span> <span style="font-size:11px;color:var(--mu)">${esc(f.ownerName||'')}</span></div>
+        <div class="flat-card-stats">
+          <div class="flat-card-stat"><span>Active</span><span class="gn">${fTenants.length}</span></div>
+          <div class="flat-card-stat"><span>Collected ৳</span><span class="gn">${fmt(fColl)}</span></div>
+          <div class="flat-card-stat"><span>Due ৳</span><span class="rd">${fmt(fDue)}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  } else flatCompSection.style.display='none';
+
+  // ── Seat status (simple, correct: Vacant = Total − Occupied) ─
+  const occupiedTens=getActiveForMonth(mon,yr,curFlat);
+  const totalSeats=curFlat==='ALL'
+    ?DB.flats.reduce((a,f)=>a+N(f.totalSeats),0)
+    :N((DB.flats.find(f=>f.id===curFlat)||{}).totalSeats);
+  const vacantSeats=Math.max(0,totalSeats-occupiedTens.length);
+  document.getElementById('seat-wrap').innerHTML=`
+    <div class="seat-summary">
+      <div>
+        <div class="seat-num-grp"><span class="seat-big gn">${occupiedTens.length}</span></div>
+        <div class="seat-lbl">Occupied Seats</div>
+      </div>
+      <div class="seat-divider"></div>
+      <div>
+        <div class="seat-num-grp"><span class="seat-big rd">${vacantSeats}</span></div>
+        <div class="seat-lbl">Vacant Seats (of ${totalSeats})</div>
+      </div>
+      <div class="seat-divider"></div>
+      <button class="btn bs" style="margin-left:auto" onclick="document.getElementById('seat-detail-box').classList.toggle('show')"><i class="ti ti-list-details"></i> Room-wise বিবরণ</button>
+    </div>
+    <div class="seat-detail-box show" id="seat-detail-box">${vacantSeatChipsHTML(curFlat)}</div>`;
+
+  // ── Rent ───────────────────────────────────────────────
+  let rColl=0,rDue=0,rPaid=0,rPart=0,rUnpaid=0;
+  occupiedTens.forEach(t=>{const s=rentMonthSummary(t.id,mon,yr);rDue+=s.due;if(s.status==='Paid')rPaid++;else if(s.status==='Partial')rPart++;else rUnpaid++;});
+  rColl=filterByFlat(DB.rentPays).filter(p=>p.month===mon&&p.year===yr).reduce((a,p)=>a+N(p.paid),0);
+  document.getElementById('dash-rent').innerHTML=[
+    ['৳'+fmt(rColl),'Collected ('+mon+')','ti-cash','gn'],
+    ['৳'+fmt(rDue),'Total Due','ti-alert-circle','rd'],
+    [rPaid,'Paid','ti-circle-check','gn'],
+    [rPart,'Partial','ti-clock','am'],
+    [rUnpaid,'Unpaid','ti-circle-x','rd'],
+    [occupiedTens.length,'Active Tenants','ti-users','bl'],
+  ].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+
+  // ── KPI overview row (top of page) ──────────────────────
+  document.getElementById('dash-mon-lbl2').textContent=`${mon} ${yr}`;
+  const occPct=totalSeats>0?Math.round(occupiedTens.length/totalSeats*100):0;
+  const totalObligation=rColl+rDue;
+  const collPct=totalObligation>0?Math.round(rColl/totalObligation*100):(occupiedTens.length?100:0);
+  document.getElementById('dash-kpi').innerHTML=
+    heroCard('ti-users','bl','Active Tenants',occupiedTens.length,null,`<a href="javascript:void 0" onclick="goTo('tenants')">View all tenants →</a>`)
+    +heroCard('ti-door','pu','Occupancy',occPct+'%',occPct,`${occupiedTens.length} of ${totalSeats} seats occupied`)
+    +heroCard('ti-percentage',collPct>=80?'gn':collPct>=50?'am':'rd','Rent Collected',collPct+'%',collPct,'This month')
+    +heroCard('ti-alert-circle',rDue>0?'rd':'gn','Rent Due','৳'+fmt(rDue),null,rDue>0?'':'No dues! Great 🎉');
+
+  // ── Service ────────────────────────────────────────────
+  const allActSvc=curFlat==='ALL'?DB.tenants.filter(t=>t.status==='Active'):DB.tenants.filter(t=>t.status==='Active'&&(t.flatId===curFlat||!t.flatId));
+  const svcColl=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0);
+  const svcDue=allActSvc.reduce((a,t)=>a+svcSummary(t.id).due,0);
+  const svcExp=filterByFlat(DB.expenses).filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+  let sp=0,spa=0,su=0;allActSvc.forEach(t=>{const s=svcSummary(t.id);if(s.status==='Paid')sp++;else if(s.status==='Partial')spa++;else su++;});
+  document.getElementById('dash-svc').innerHTML=[
+    ['৳'+fmt(svcColl),'Collected','ti-cash','gn'],
+    ['৳'+fmt(svcDue),'Remaining','ti-alert-circle','rd'],
+    ['৳'+fmt(svcExp),'Expense','ti-receipt','or'],
+    ['৳'+fmt(svcColl-svcExp),'Balance','ti-wallet',svcColl>=svcExp?'gn':'rd'],
+    [sp+'/'+spa+'/'+su,'P/Pa/U','ti-chart-pie','bl'],
+  ].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+
+  // ── Advance ────────────────────────────────────────────
+  const advColl=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0);
+  const advDue=allActSvc.reduce((a,t)=>a+advSummary(t.id).due,0);
+  document.getElementById('dash-adv').innerHTML=[
+    ['৳'+fmt(advColl),'Collected','ti-cash','gn'],
+    ['৳'+fmt(advDue),'Remaining','ti-alert-circle','rd'],
+  ].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+
+  // ── Chart (Rent Status donut via Chart.js) ──────────────
+  renderRentStatusChart(rPaid,rPart,rUnpaid);
+
+  // ── Recent payments ────────────────────────────────────
+  const recent=[...filterByFlat(DB.rentPays)].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  document.getElementById('dash-recent').innerHTML=recent.length
+    ?recent.map(p=>{const s=rentMonthSummary(p.tid,p.month,p.year);return`<tr class="${rowC(s.status)}"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td style="color:var(--gn);font-weight:700">৳${fmt(p.paid)}</td><td style="color:var(--rd)">৳${fmt(s.due)}</td><td>${s.carryIn>0?`<span class="carry-tag">৳${fmt(s.carryIn)}</span>`:'—'}</td><td>${badge(s.status)}</td></tr>`;}).join('')
+    :`<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--mu)">No payments yet</td></tr>`;
+
+  // ── Quick Actions ───────────────────────────────────────
+  const qa=[
+    ['ti-user-plus','bl','Add Tenant',()=>{if(canEdit('tenants'))openAddTenant();else toast('অনুমতি নেই','er');}],
+    ['ti-cash','gn','Rent Payment',()=>{if(canEdit('rent'))openRentPayModal();else toast('অনুমতি নেই','er');}],
+    ['ti-tool','pu','Service Charge',()=>{if(canEdit('service'))openSvcPayModal();else toast('অনুমতি নেই','er');}],
+    ['ti-coin','or','Advance Money',()=>{if(canEdit('advance'))openAdvPayModal();else toast('অনুমতি নেই','er');}],
+    ['ti-receipt','rd','Expenses',()=>{if(canEdit('expenses'))openExpModal();else toast('অনুমতি নেই','er');}],
+    ['ti-alert-circle','am','Due Tracker',()=>goTo('due')],
+  ];
+  _quickActionFns=qa.map(q=>q[3]);
+  document.getElementById('quick-actions').innerHTML=qa.map(([ic,c,l],i)=>`<button class="card stat2" style="cursor:pointer;border:none;text-align:left;font-family:inherit" onclick="quickAction(${i})"><div class="stat2-ic ${c}"><i class="ti ${ic}"></i></div><div class="stat2-body"><div class="stat2-v" style="font-size:12.5px">${l}</div></div></button>`).join('');
+
+  renderOccTrend();
+}
+let _quickActionFns=[];
+function quickAction(i){if(_quickActionFns[i])_quickActionFns[i]();}
+
+// ── Chart.js: Rent Status donut (Paid/Partial/Unpaid) ────────
+let rentStatusChartInst=null;
+function renderRentStatusChart(rPaid,rPart,rUnpaid){
+  const tot=rPaid+rPart+rUnpaid;
+  const canvas=document.getElementById('rentStatusCanvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const colors=['#12B76A','#F79009','#F04438'];
+  if(rentStatusChartInst)rentStatusChartInst.destroy();
+  rentStatusChartInst=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:['Paid','Partial','Unpaid'],datasets:[{data:[rPaid,rPart,rUnpaid],backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:true}},maintainAspectRatio:true},
+    plugins:[{
+      id:'centerText',
+      afterDraw(chart){
+        const {ctx,chartArea:{left,right,top,bottom}}=chart;
+        const cx=(left+right)/2,cy=(top+bottom)/2;
+        ctx.save();
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font='700 22px -apple-system,sans-serif';ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--tx')||'#0f172a';
+        ctx.fillText(String(tot),cx,cy-9);
+        ctx.font='600 10px -apple-system,sans-serif';ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--mu')||'#64748b';
+        ctx.fillText('TOTAL',cx,cy+11);
+        ctx.restore();
+      }
+    }]
+  });
+  document.getElementById('rent-status-legend').innerHTML=[['Paid',rPaid,'#12B76A'],['Partial',rPart,'#F79009'],['Unpaid',rUnpaid,'#F04438']].map(([l,v,c])=>
+    `<div class="legend-row"><span class="legend-dot" style="background:${c}"></span>${l}<span class="legend-num">${v} (${tot?Math.round(v/tot*100):0}%)</span></div>`
+  ).join('');
+}
+
+// ── Feature 11: Occupancy Trend Chart (last 6 months) ────────
+let occTrendChartInst=null;
+function renderOccTrend(){
+  const now=new Date();
+  const totalSeats=curFlat==='ALL'?DB.flats.reduce((a,f)=>a+N(f.totalSeats),0):N((DB.flats.find(f=>f.id===curFlat)||{}).totalSeats);
+  const pts=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const mon=MONTHS[d.getMonth()],yr=d.getFullYear();
+    pts.push({label:mon.slice(0,3)+" '"+String(yr).slice(2),occ:getActiveForMonth(mon,yr,curFlat).length});
+  }
+  const canvas=document.getElementById('occTrendCanvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const gradient=ctx.createLinearGradient(0,0,0,180);
+  gradient.addColorStop(0,'rgba(59,109,240,.28)');gradient.addColorStop(1,'rgba(59,109,240,0)');
+  if(occTrendChartInst)occTrendChartInst.destroy();
+  occTrendChartInst=new Chart(ctx,{
+    type:'line',
+    data:{labels:pts.map(p=>p.label),datasets:[{
+      label:'Occupied Seats',data:pts.map(p=>p.occ),borderColor:'#3B6DF0',backgroundColor:gradient,
+      fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#3B6DF0',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5
+    },totalSeats?{
+      label:'Total Seats',data:pts.map(()=>totalSeats),borderColor:'#D3DAE6',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false,tension:0
+    }:null].filter(Boolean)},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:10.5}}}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0,font:{size:10.5}},grid:{color:'rgba(148,163,184,.15)'}},x:{ticks:{font:{size:10.5}},grid:{display:false}}}
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FLATS
+// ═══════════════════════════════════════════════════════════
+function renderFlats(){
+  document.getElementById('flat-body').innerHTML=DB.flats.length
+    ?DB.flats.map(f=>{
+      const tCnt=DB.tenants.filter(t=>t.flatId===f.id&&t.status==='Active').length;
+      const seats=N(f.totalSeats),occPct=seats?Math.round(tCnt/seats*100):0;
+      const roomCnt=(f.rooms&&f.rooms.length)||f.totalRooms||0;
+      return `<div class="flat-info-card">
+        <div class="flat-info-hd">
+          <div class="flat-info-ic"><i class="ti ti-building"></i></div>
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:700;font-size:14px">${esc(f.name)}</div>
+            <div style="font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.address)||'—'}</div>
+          </div>
+          <span class="flat-tag">${esc(f.id)}</span>
+        </div>
+        <div class="flat-info-stats">
+          <div><div class="stat2-l">Flat Rent</div><div style="font-weight:700;font-size:14px">৳${fmt(f.flatRent)}</div></div>
+          <div><div class="stat2-l">Rooms</div><div style="font-weight:700;font-size:14px">${roomCnt}</div></div>
+          <div><div class="stat2-l">Owner</div><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.ownerName)||'—'}</div></div>
+        </div>
+        <div style="margin:9px 0 3px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:3px"><span>Occupancy</span><span style="font-weight:700;color:var(--tx)">${tCnt} / ${seats} seats</span></div>
+          <div class="prog"><div class="pf" style="width:${occPct}%;background:${occPct>=90?'var(--gn)':occPct>=60?'var(--pr)':'var(--rd)'}"></div></div>
+        </div>
+        ${f.notes?`<div style="font-size:11px;color:var(--mu);margin-top:6px">📝 ${esc(f.notes)}</div>`:''}
+        <div style="display:flex;gap:5px;margin-top:10px">
+          <button class="btn bs" style="flex:1" onclick="openEditFlat('${f.id}')"><i class="ti ti-edit"></i> Edit</button>
+          <button class="btn bs bd_" onclick="delFlat('${f.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('')
+    :`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)"><i class="ti ti-building" style="font-size:32px;display:block;margin-bottom:8px"></i>No flats yet. Add your first flat!</div>`;
+}
+// ── Room/Seat builder (Flats) ────────────────────────────────
+function seatDefaultName(j){return 'Seat '+(j<26?String.fromCharCode(65+j):(j+1));}
+function seatInputsHTML(roomIdx,count,existingSeats){
+  existingSeats=existingSeats||[];
+  let h='';
+  for(let j=0;j<count;j++) h+=`<input class="seat-input fr-seat" data-room="${roomIdx}" data-seat="${j}" value="${esc(existingSeats[j]||seatDefaultName(j))}" placeholder="${esc(seatDefaultName(j))}">`;
+  return h||'<span style="color:var(--mu);font-size:11px">এই Room-এ Seat সংখ্যা 0</span>';
+}
+function roomBlockHTML(idx,name,seatCount,seats){
+  return `<div class="room-block" data-room-idx="${idx}">
+    <div class="room-block-hd">
+      <div><label>Room ${idx+1} Name</label><input class="rb-input fr-name" data-idx="${idx}" value="${esc(name)}" placeholder="Room ${idx+1}"></div>
+      <div><label>Seats in this Room</label><input class="rb-input fr-seatcount" type="number" min="0" data-idx="${idx}" value="${seatCount}" onchange="rebuildSeatInputs(${idx})"></div>
+    </div>
+    <div class="seat-grid" id="fr-seats-${idx}">${seatInputsHTML(idx,seatCount,seats)}</div>
+  </div>`;
+}
+function buildRoomsBuilder(existingRooms){
+  existingRooms=existingRooms||[];
+  const totalRooms=Math.max(0,N(document.getElementById('f-rooms').value));
+  let html='';
+  for(let i=0;i<totalRooms;i++){
+    const ex=existingRooms[i]||{};
+    const name=ex.name||('Room '+(i+1));
+    const seatCount=(ex.seats&&ex.seats.length)?ex.seats.length:1;
+    html+=roomBlockHTML(i,name,seatCount,ex.seats);
+  }
+  document.getElementById('f-rooms-builder').innerHTML=html||'<span style="color:var(--mu);font-size:11px">উপরে Total Rooms দিন</span>';
+  updateSeatSumHint();
+}
+function onRoomCountChange(){buildRoomsBuilder(collectRoomsFromDOM());}
+function rebuildSeatInputs(roomIdx){
+  const block=document.querySelector(`.room-block[data-room-idx="${roomIdx}"]`);if(!block)return;
+  const existing=[...block.querySelectorAll('.fr-seat')].map(inp=>inp.value.trim());
+  const count=Math.max(0,N(block.querySelector('.fr-seatcount').value));
+  document.getElementById('fr-seats-'+roomIdx).innerHTML=seatInputsHTML(roomIdx,count,existing);
+  updateSeatSumHint();
+}
+function collectRoomsFromDOM(){
+  const rooms=[];
+  document.querySelectorAll('#f-rooms-builder .room-block').forEach(block=>{
+    const idx=Number(block.dataset.roomIdx);
+    const name=block.querySelector('.fr-name').value.trim()||('Room '+(idx+1));
+    const seats=[...block.querySelectorAll('.fr-seat')].map(inp=>inp.value.trim()).filter(v=>v);
+    rooms.push({name,seats});
+  });
+  return rooms;
+}
+function updateSeatSumHint(){
+  const el=document.getElementById('seat-sum-hint');if(!el)return;
+  const target=N(document.getElementById('f-seats').value);
+  const actual=collectRoomsFromDOM().reduce((a,r)=>a+r.seats.length,0);
+  el.textContent=`মোট Seat দেওয়া হয়েছে: ${actual} / Total Seats: ${target||0}`;
+  el.style.color=(target&&actual!==target)?'var(--rd)':'var(--mu)';
+}
+function openAddFlat(){
+  editFlatId=null;document.getElementById('flat-modal-title').textContent='Add Flat';
+  ['f-id','f-name','f-addr','f-owner','f-rent','f-rooms','f-seats','f-notes'].forEach(id=>document.getElementById(id).value='');
+  buildRoomsBuilder([]);
+  setBusy('save-f',false,'<i class="ti ti-check"></i> Save Flat');openM('m-flat');
+}
+function openEditFlat(id){
+  const f=DB.flats.find(x=>x.id===id);if(!f)return;editFlatId=id;document.getElementById('flat-modal-title').textContent='Edit Flat';
+  document.getElementById('f-id').value=f.id;document.getElementById('f-name').value=f.name;document.getElementById('f-addr').value=f.address;
+  document.getElementById('f-owner').value=f.ownerName;document.getElementById('f-rent').value=f.flatRent;
+  document.getElementById('f-rooms').value=f.totalRooms;document.getElementById('f-seats').value=f.totalSeats;document.getElementById('f-notes').value=f.notes;
+  buildRoomsBuilder(f.rooms||[]);
+  setBusy('save-f',false,'<i class="ti ti-check"></i> Update');openM('m-flat');
+}
+function saveFlat(){
+  const id=document.getElementById('f-id').value.trim(),nm=document.getElementById('f-name').value.trim();
+  if(!id||!nm){toast('Flat ID & Name required','er');return;}
+  const totalSeats=N(document.getElementById('f-seats').value);
+  const rooms=collectRoomsFromDOM();
+  const seatSum=rooms.reduce((a,r)=>a+r.seats.length,0);
+  if(totalSeats&&seatSum!==totalSeats){toast(`Room গুলোর Seat সংখ্যা (${seatSum}) আর Total Seats (${totalSeats}) মিলছে না`,'er');return;}
+  const data={id,name:nm,address:document.getElementById('f-addr').value.trim(),ownerName:document.getElementById('f-owner').value.trim(),flatRent:N(document.getElementById('f-rent').value),totalRooms:N(document.getElementById('f-rooms').value),totalSeats,notes:document.getElementById('f-notes').value.trim(),rooms};
+  setBusy('save-f',true,'');const fn=editFlatId?'updateFlat':'addFlat';
+  google.script.run.withSuccessHandler(r=>{setBusy('save-f',false,'<i class="ti ti-check"></i> Save Flat');if(r.success){toast(r.message,'ok');closeM('m-flat');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-f',false,'<i class="ti ti-check"></i> Save Flat');toast('Error: '+e,'er');})[fn](data);
+}
+function delFlat(id){if(!confirm('Delete flat '+id+'? This will NOT delete its tenants.'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteFlat(id);}
+
+// ── Feature 8: Vacant Seat Quick-Share ───────────────────────
+// ── Room/Seat occupancy detail (named seats, not just counts) ──────
+function seatOccupancyDetail(scopeFlatId){
+  const flats=scopeFlatId==='ALL'?DB.flats:DB.flats.filter(f=>f.id===scopeFlatId);
+  return flats.map(f=>{
+    const activeTenants=DB.tenants.filter(t=>t.flatId===f.id&&t.status==='Active');
+    if(f.rooms&&f.rooms.length){
+      const rooms=f.rooms.map(r=>({
+        name:r.name,
+        seats:r.seats.map(s=>{
+          const combo=`${r.name} — ${s}`;
+          const tenant=activeTenants.find(t=>t.room===combo);
+          return {name:s,occupied:!!tenant,tenantName:tenant?tenant.name:null};
+        })
+      }));
+      return {flat:f,hasRoomData:true,rooms,
+        occupiedCount:rooms.reduce((a,r)=>a+r.seats.filter(s=>s.occupied).length,0),
+        vacantCount:rooms.reduce((a,r)=>a+r.seats.filter(s=>!s.occupied).length,0)};
+    }
+    return {flat:f,hasRoomData:false,occupiedCount:activeTenants.length,totalSeats:N(f.totalSeats),vacantCount:Math.max(0,N(f.totalSeats)-activeTenants.length)};
+  });
+}
+function vacantSeatChipsHTML(scopeFlatId){
+  const detail=seatOccupancyDetail(scopeFlatId);
+  if(!detail.length) return '<div style="color:var(--mu);font-size:12px">কোনো Flat নেই</div>';
+  return detail.map(d=>{
+    if(d.hasRoomData){
+      const rooms=d.rooms.map(r=>{
+        const chips=r.seats.map(s=>s.occupied
+          ?`<span class="vchip vchip-occ" title="${esc(s.tenantName||'')}"><i class="ti ti-lock" style="font-size:10px"></i> ${esc(s.name)}</span>`
+          :`<span class="vchip vchip-vac"><i class="ti ti-circle-check" style="font-size:10px"></i> ${esc(s.name)}</span>`
+        ).join('');
+        return `<div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:4px"><span style="font-size:10.5px;font-weight:700;color:var(--mu);min-width:76px;padding-top:3px">${esc(r.name)}</span><div style="display:flex;gap:4px;flex-wrap:wrap">${chips}</div></div>`;
+      }).join('');
+      return `<div style="margin-bottom:9px"><div style="font-weight:700;font-size:12.5px;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="flat-tag">${esc(d.flat.name)}</span><span style="font-size:11px;color:var(--mu);font-weight:400">${d.vacantCount} vacant / ${d.occupiedCount+d.vacantCount} total</span></div>${rooms}</div>`;
+    }
+    return `<div style="margin-bottom:9px"><div style="font-weight:700;font-size:12.5px;margin-bottom:3px"><span class="flat-tag">${esc(d.flat.name)}</span></div><div style="font-size:11px;color:var(--mu)">${d.vacantCount} seat vacant (Room/Seat নাম এখনো সেট করা হয়নি — Flats page থেকে Edit করে যোগ করুন)</div></div>`;
+  }).join('');
+}
+function openVacShare(){
+  const lines=[];
+  DB.flats.forEach(f=>{
+    const activeInFlat=DB.tenants.filter(t=>t.flatId===f.id&&t.status==='Active');
+    const vac=Math.max(0,N(f.totalSeats)-activeInFlat.length);
+    if(vac>0){
+      const avgRent=activeInFlat.length?Math.round(activeInFlat.reduce((a,t)=>a+N(t.rent),0)/activeInFlat.length):N(f.flatRent);
+      let seatLine='';
+      if(f.rooms&&f.rooms.length){
+        const occSet=new Set(activeInFlat.map(t=>t.room).filter(Boolean));
+        const vacByRoom=f.rooms.map(r=>{
+          const vs=r.seats.filter(s=>!occSet.has(`${r.name} — ${s}`));
+          return vs.length?`${r.name}: ${vs.join(', ')}`:null;
+        }).filter(Boolean);
+        if(vacByRoom.length) seatLine=`🛏️ খালি Seat: ${vacByRoom.join(' | ')}\n`;
+      }
+      lines.push(`🏠 *${f.name}*\n📍 ${f.address||'-'}\n${seatLine}🔢 ${vac} Seat${vac>1?'s':''} খালি আছে (মোট ${f.totalSeats} সিট)\n💰 আনুমানিক ভাড়া/সিট: ৳${fmt(avgRent)}/মাস\n📞 যোগাযোগ: ${f.ownerName||'যোগাযোগ করুন'}`);
+    }
+  });
+  document.getElementById('vacshare-text').value=lines.length?lines.join('\n\n────────\n\n'):'এই মুহূর্তে কোনো Flat-এ খালি সিট নেই। 🎉';
+  openM('m-vacshare');
+}
+function copyVacShare(){
+  const ta=document.getElementById('vacshare-text');ta.select();ta.setSelectionRange(0,999999);
+  try{document.execCommand('copy');toast('Copied!','ok');}
+  catch(e){if(navigator.clipboard)navigator.clipboard.writeText(ta.value).then(()=>toast('Copied!','ok')).catch(()=>toast('Select & copy manually','er'));else toast('Select & copy manually','er');}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TENANTS
+// ═══════════════════════════════════════════════════════════
+function renderTenants(){
+  const q=((document.getElementById('t-srch').value||'')+(document.getElementById('gsearch').value||'')).toLowerCase();
+  let list=filterByFlat(DB.tenants).filter(t=>{
+    if(tenantF!=='All'&&t.status!==tenantF)return false;
+    if(q&&!`${t.id} ${t.name} ${t.room} ${t.phone}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  list=applySort(list,sortS.t);
+  document.getElementById('t-body').innerHTML=list.length
+    ?list.map(t=>`<tr class="${rowC(t.status)}">
+      <td>${ftag(t.flatId)}</td>
+      <td><span class="tag">${esc(t.id)}</span></td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="av">${esc((t.name||'?')[0])}</div>${esc(t.name)}</div></td>
+      <td><strong>${esc(t.room)}</strong></td><td>${esc(t.phone)}</td>
+      <td style="font-weight:700">৳${fmt(t.rent)}</td><td>৳${fmt(t.serviceCharge)}</td><td>৳${fmt(t.advanceDue)}</td>
+      <td style="color:var(--mu)">${t.entry}</td>
+      <td style="color:var(--rd);font-size:11px">${t.leftDate||'—'}</td>
+      <td>${badge(t.status)}</td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn bs" onclick="openLedger('${t.id}')" title="Payment History"><i class="ti ti-history"></i></button>
+        ${t.status==='Active'&&canEdit('tenants')?`<button class="btn bs" onclick="openSettle('${t.id}')" title="Settle & Exit"><i class="ti ti-door-exit"></i></button>`:''}
+        ${canEdit('tenants')?`<button class="btn bs" onclick="openEditTenant('${t.id}')"><i class="ti ti-edit"></i></button>`:''}
+        ${canDelete('tenants')?`<button class="btn bs bd_" onclick="delTenant('${t.id}')"><i class="ti ti-trash"></i></button>`:''}
+      </div></td>
+    </tr>`).join('')
+    :`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--mu)">No tenants found</td></tr>`;
+}
+function fT(f){tenantF=f;document.querySelectorAll('[data-tf]').forEach(b=>b.classList.toggle('on',b.dataset.tf===f));renderTenants();}
+// ── Tenant Room/Seat cascading select (sourced from the Flat's Room/Seat structure) ──
+function occupiedSeatSet(flatId,excludeTid){
+  const set=new Set();
+  DB.tenants.filter(t=>t.flatId===flatId&&t.status==='Active'&&t.id!==excludeTid&&t.room).forEach(t=>set.add(t.room));
+  return set;
+}
+function onTenantFlatChange(){
+  const flat=DB.flats.find(f=>f.id===document.getElementById('t-flat').value);
+  const hasRooms=flat&&flat.rooms&&flat.rooms.length;
+  document.getElementById('t-room-select-wrap').style.display=hasRooms?'':'none';
+  document.getElementById('t-room-manual-wrap').style.display=hasRooms?'none':'';
+  const roomSel=document.getElementById('t-room-sel');
+  roomSel.innerHTML='<option value="">-- Select Room --</option>';
+  document.getElementById('t-seat-sel').innerHTML='<option value="">-- Select Seat --</option>';
+  if(!hasRooms)return;
+  flat.rooms.forEach(r=>{const o=document.createElement('option');o.value=r.name;o.textContent=r.name;roomSel.appendChild(o);});
+}
+function onTenantRoomChange(){
+  const flatId=document.getElementById('t-flat').value,flat=DB.flats.find(f=>f.id===flatId);
+  const roomName=document.getElementById('t-room-sel').value,seatSel=document.getElementById('t-seat-sel');
+  seatSel.innerHTML='<option value="">-- Select Seat --</option>';
+  if(!flat||roomName==='__legacy__'||!roomName)return;
+  const room=flat.rooms.find(r=>r.name===roomName);if(!room)return;
+  const occupied=occupiedSeatSet(flatId,editTId);
+  const myCurrent=editTId?(DB.tenants.find(t=>t.id===editTId)||{}).room:null;
+  room.seats.forEach(seatName=>{
+    const combo=`${roomName} — ${seatName}`;
+    if(occupied.has(combo)&&combo!==myCurrent)return; // occupied by someone else — hide
+    const o=document.createElement('option');o.value=seatName;o.textContent=seatName;seatSel.appendChild(o);
+  });
+}
+function initTenantRoomSeat(existingRoomStr){
+  onTenantFlatChange();
+  if(!existingRoomStr)return;
+  const roomSel=document.getElementById('t-room-sel');
+  if(document.getElementById('t-room-select-wrap').style.display==='none'){document.getElementById('tr_').value=existingRoomStr;return;}
+  const parts=existingRoomStr.split(' — ');
+  const roomName=parts[0],seatName=parts.slice(1).join(' — ');
+  if([...roomSel.options].some(o=>o.value===roomName)){
+    roomSel.value=roomName;onTenantRoomChange();
+    const seatSel=document.getElementById('t-seat-sel');
+    if(seatName&&![...seatSel.options].some(o=>o.value===seatName)){const o=document.createElement('option');o.value=seatName;o.textContent=seatName+' (current)';seatSel.appendChild(o);}
+    seatSel.value=seatName;
+  } else {
+    const o=document.createElement('option');o.value='__legacy__';o.textContent=existingRoomStr+' (old entry)';roomSel.appendChild(o);
+    roomSel.dataset.legacyRaw=existingRoomStr;roomSel.value='__legacy__';
+    document.getElementById('t-seat-sel').innerHTML=`<option value="__legacy__">${esc(existingRoomStr)}</option>`;
+  }
+}
+function tenantRoomCombined(){
+  if(document.getElementById('t-room-select-wrap').style.display==='none')return document.getElementById('tr_').value.trim();
+  const roomSel=document.getElementById('t-room-sel');
+  if(roomSel.value==='__legacy__')return roomSel.dataset.legacyRaw||'';
+  const room=roomSel.value,seat=document.getElementById('t-seat-sel').value;
+  if(!room)return'';
+  return seat?`${room} — ${seat}`:room;
+}
+function toggleLeftDate(){const s=document.getElementById('ts').value;document.getElementById('left-date-grp').style.display=(s==='Left'||s==='Inactive')?'':'none';}
+function openAddTenant(){
+  editTId=null;document.getElementById('tm-ttl').textContent='Add Tenant';
+  ['ti','tn','tr_','tp','trnt','tsvc','tadv','tnote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tent').value=todayISO();document.getElementById('tleft').value='';document.getElementById('ts').value='Active';document.getElementById('left-date-grp').style.display='none';
+  populateFlatDropdowns();onTenantFlatChange();
+  setBusy('save-t',false,'<i class="ti ti-check"></i> Save');openM('m-ten');
+}
+function openEditTenant(id){
+  const t=DB.tenants.find(x=>x.id===id);if(!t)return;
+  editTId=id;document.getElementById('tm-ttl').textContent='Edit Tenant';
+  document.getElementById('ti').value=t.id;document.getElementById('tn').value=t.name;document.getElementById('tp').value=t.phone;
+  document.getElementById('trnt').value=t.rent;document.getElementById('tsvc').value=t.serviceCharge;document.getElementById('tadv').value=t.advanceDue;
+  const ent=t.entry?new Date(t.entry):null;document.getElementById('tent').value=ent&&!isNaN(ent)?dateToISO(ent):todayISO();document.getElementById('ts').value=t.status;document.getElementById('tnote').value=t.notes;
+  const left=t.leftDate?new Date(t.leftDate):null;document.getElementById('tleft').value=left&&!isNaN(left)?dateToISO(left):'';
+  document.getElementById('left-date-grp').style.display=(t.status==='Left'||t.status==='Inactive')?'':'none';
+  populateFlatDropdowns();document.getElementById('t-flat').value=t.flatId||'';
+  initTenantRoomSeat(t.room);
+  setBusy('save-t',false,'<i class="ti ti-check"></i> Update');openM('m-ten');
+}
+function saveTenant(){
+  const id=document.getElementById('ti').value.trim(),nm=document.getElementById('tn').value.trim();
+  if(!id||!nm){toast('ID & Name required','er');return;}
+  const room=tenantRoomCombined();
+  if(document.getElementById('t-room-select-wrap').style.display!=='none'&&!room){toast('Room ও Seat select করুন','er');return;}
+  const data={flatId:document.getElementById('t-flat').value,id,name:nm,room,phone:document.getElementById('tp').value.trim(),rent:N(document.getElementById('trnt').value),serviceCharge:N(document.getElementById('tsvc').value),advanceDue:N(document.getElementById('tadv').value),entry:document.getElementById('tent').value,leftDate:document.getElementById('tleft').value,status:document.getElementById('ts').value,notes:document.getElementById('tnote').value.trim()};
+  setBusy('save-t',true,'');
+  const fn=editTId?'updateTenant':'addTenant';
+  google.script.run.withSuccessHandler(r=>{setBusy('save-t',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-ten');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-t',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');})[fn](data);
+}
+function delTenant(id){if(!confirm('Delete tenant '+id+'?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteTenant(id);}
+
+// ── Feature 4: Tenant Ledger / Full Payment History ─────────
+function openLedger(tid){
+  const t=DB.tenants.find(x=>x.id===tid);if(!t)return;
+  document.getElementById('ledger-title').textContent='Payment History — '+t.name;
+  const typeBadge={Rent:'bgn',Service:'bbl',Advance:'bpu'};
+  const rows=[
+    ...DB.rentPays.filter(p=>p.tid===tid&&p.method!=='Pending').map(p=>({...p,_type:'Rent',_amt:p.paid,_icon:'ti-home'})),
+    ...DB.svcPays.filter(p=>p.tid===tid).map(p=>({...p,_type:'Service',_amt:p.paid,_icon:'ti-tool'})),
+    ...DB.advPays.filter(p=>p.tid===tid).map(p=>({...p,_type:'Advance',_amt:p.paid,_icon:'ti-coin'}))
+  ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const totalRent=DB.rentPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
+  const totalSvc=DB.svcPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
+  const totalAdv=DB.advPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
+  document.getElementById('ledger-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--bd);margin-bottom:10px">
+      <div style="background:var(--sf);padding:11px;text-align:center"><div class="sl" style="justify-content:center">Total Rent Paid</div><div class="sv gn">৳${fmt(totalRent)}</div></div>
+      <div style="background:var(--sf);padding:11px;text-align:center"><div class="sl" style="justify-content:center">Total Service Paid</div><div class="sv bl">৳${fmt(totalSvc)}</div></div>
+      <div style="background:var(--sf);padding:11px;text-align:center"><div class="sl" style="justify-content:center">Total Advance Paid</div><div class="sv pu">৳${fmt(totalAdv)}</div></div>
+    </div>
+    <div class="tw" style="max-height:360px;overflow-y:auto;padding:0 14px 14px"><table><thead><tr><th>Date</th><th>Type</th><th>Month</th><th>Amount ৳</th><th>Method</th><th></th></tr></thead>
+    <tbody>${rows.length?rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td><span class="badge ${typeBadge[r._type]}"><i class="ti ${r._icon}"></i> ${r._type}</span></td><td>${r.month?r.month+' '+r.year:'—'}</td><td style="font-weight:700">৳${fmt(r._amt)}</td><td>${esc(r.method)}</td><td><button class="btn bs" onclick="openReceipt('${r._type.toLowerCase()}','${r.id}')" title="Receipt"><i class="ti ti-receipt"></i></button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--mu)">No payments yet</td></tr>'}</tbody></table></div>`;
+  openM('m-ledger');
+}
+
+// ── Feature 6: Tenant Exit / Final Settlement ────────────────
+function openSettle(tid){
+  const t=DB.tenants.find(x=>x.id===tid);if(!t)return;
+  const entry=t.entry?new Date(String(t.entry)):null;
+  const now=new Date();
+  let rentDue=0;
+  if(entry&&!isNaN(entry)){
+    let cursor=new Date(entry.getFullYear(),entry.getMonth(),1);
+    const stop=new Date(now.getFullYear(),now.getMonth(),1);
+    let guard=0;
+    while(cursor<=stop&&guard<600){
+      const mon=MONTHS[cursor.getMonth()],yr=cursor.getFullYear();
+      if(isTenantActiveInMonth(t,mon,yr)) rentDue+=rentMonthSummary(tid,mon,yr).due;
+      cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
+      guard++;
+    }
+  }
+  const svcDue=svcSummary(tid).due;
+  const advPaid=DB.advPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
+  const advRemaining=Math.max(0,N(t.advanceDue)-advPaid); // unpaid advance, not relevant to refund
+  const totalOwedByTenant=rentDue+svcDue;
+  const net=advPaid-totalOwedByTenant; // +ve => refund to tenant, -ve => tenant owes
+  editSettleTid=tid;
+  document.getElementById('settle-body').innerHTML=`
+    <div class="ibox warn"><i class="ti ti-alert-triangle"></i><div><strong>${esc(t.name)}</strong> কে Left mark করার আগে হিসাবটা দেখে নিন। Confirm করলে status "Left" হয়ে যাবে।</div></div>
+    <table style="width:100%;font-size:13px;margin-top:4px">
+      <tr><td style="padding:6px 0;color:var(--mu)">Rent + Service বাকি আছে</td><td style="text-align:right;font-weight:700;color:var(--rd)">৳${fmt(totalOwedByTenant)}</td></tr>
+      <tr><td style="padding:6px 0;color:var(--mu)">Advance জমা আছে (paid so far)</td><td style="text-align:right;font-weight:700;color:var(--gn)">৳${fmt(advPaid)}</td></tr>
+      ${advRemaining>0?`<tr><td style="padding:6px 0;color:var(--mu)">Advance এখনও বাকি (কখনো নেওয়া হয়নি)</td><td style="text-align:right;color:var(--mu)">৳${fmt(advRemaining)}</td></tr>`:''}
+      <tr style="border-top:1.5px solid var(--bd)"><td style="padding:8px 0;font-weight:700">${net>=0?'Tenant-কে ফেরত দিতে হবে':'Tenant-এর কাছে পাওনা আছে'}</td><td style="text-align:right;font-weight:700;font-size:16px;color:${net>=0?'var(--gn)':'var(--rd)'}">৳${fmt(Math.abs(net))}</td></tr>
+    </table>
+    <div class="hint" style="margin-top:8px">হিসাব: Advance জমা − (বাকি Rent + Service)। এটা শুধু হিসাব দেখানোর জন্য — Advance ফেরত দেওয়ার entry আলাদাভাবে (নগদে) করতে হবে, app এখান থেকে automatically টাকা ফেরত পাঠায় না।</div>`;
+  openM('m-settle');
+}
+function confirmSettle(){
+  const t=DB.tenants.find(x=>x.id===editSettleTid);if(!t)return;
+  setBusy('confirm-settle-btn',true,'');
+  const data={id:t.id,flatId:t.flatId,name:t.name,room:t.room,phone:t.phone,rent:t.rent,serviceCharge:t.serviceCharge,advanceDue:t.advanceDue,entry:t.entry,leftDate:'',status:'Left',notes:t.notes};
+  google.script.run.withSuccessHandler(r=>{
+    setBusy('confirm-settle-btn',false,'<i class="ti ti-door-exit"></i> Confirm Exit');
+    if(r.success){toast('Settled & marked Left','ok');closeM('m-settle');clearCache();quickRefresh();}
+    else toast(r.message,'er');
+  }).withFailureHandler(e=>{setBusy('confirm-settle-btn',false,'<i class="ti ti-door-exit"></i> Confirm Exit');toast('Error: '+e,'er');}).updateTenant(data);
+}
+
+// ── Feature 7: Payment Receipt (print / WhatsApp share) ──────
+function openReceipt(type,id){
+  let p,label;
+  if(type==='rent'){p=DB.rentPays.find(x=>x.id===id);label='Rent Payment Receipt';}
+  else if(type==='service'){p=DB.svcPays.find(x=>x.id===id);label='Service Charge Receipt';}
+  else if(type==='advance'){p=DB.advPays.find(x=>x.id===id);label='Advance Money Receipt';}
+  else {p=DB.ownerPays.find(x=>x.id===id);label='Owner Payment Receipt';}
+  if(!p){toast('Payment not found','er');return;}
+  const t=DB.tenants.find(x=>x.id===p.tid);
+  const f=DB.flats.find(x=>x.id===p.flatId);
+  const now=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const genDate=`${now.getDate()} ${M[now.getMonth()]} ${now.getFullYear()}`;
+  const lines=type==='owner'?[
+    ['Receipt No', p.receipt||p.id],
+    ['Date', fmtDate(p.date)],
+    ['Flat', f?f.name:'-'],
+    ['Owner', f?f.ownerName:'-'],
+    ['Month', p.month+' '+p.year],
+    ['Flat Rent', '৳'+fmt(p.flatRent)],
+    ['Amount Paid', '৳'+fmt(p.paid)],
+    ['Method', p.method]
+  ]:[
+    ['Receipt No', p.receipt||p.id],
+    ['Date', fmtDate(p.date)],
+    ['Tenant', (t?t.name:(p.name||'-'))+' ('+p.tid+')'],
+    ['Flat', f?f.name:'-'],
+    ['Room/Seat', t?t.room:(p.room||'-')],
+    ...(p.month?[['Month', p.month+' '+p.year]]:[]),
+    ['Amount Paid', '৳'+fmt(p.paid)],
+    ['Method', p.method]
+  ];
+  document.getElementById('receipt-body').innerHTML=`
+    <div id="print-area-receipt" class="print-target" style="padding:20px">
+      <div style="text-align:center;margin-bottom:16px"><div style="font-weight:700;font-size:16px">${label}</div><div style="color:var(--mu);font-size:11px">Mess Manager</div></div>
+      <table style="width:100%;font-size:13px">${lines.map(([k,v])=>`<tr><td style="padding:5px 0;color:var(--mu)">${k}</td><td style="padding:5px 0;font-weight:700;text-align:right">${v}</td></tr>`).join('')}</table>
+      <div style="text-align:center;margin-top:16px;color:var(--mu);font-size:10.5px">Generated on ${genDate}</div>
+    </div>`;
+  const msg=`${label}\n`+lines.map(([k,v])=>`${k}: ${v}`).join('\n');
+  const link=type==='owner'?null:waLink(t?t.phone:'',msg);
+  const waBtn=document.getElementById('receipt-wa-btn');
+  if(link){waBtn.href=link;waBtn.style.display='';}else waBtn.style.display='none';
+  openM('m-receipt');
+}
+function printReceipt(){window.print();}
+function printOwnerStatement(){
+  if(myRole!=='Admin'){toast('শুধু Admin statement print করতে পারবেন','er');return;}
+  const tR=filterByFlat(DB.rentPays).reduce((a,p)=>a+N(p.paid),0),tO=filterByFlat(DB.ownerPays).reduce((a,p)=>a+N(p.paid),0);
+  const sC=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0),sE=filterByFlat(DB.expenses).filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+  const tInv=filterByFlat(DB.investments).reduce((a,i)=>a+N(i.amount),0),ownExp=filterByFlat(DB.expenses).filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const pr=tR-tO,sB=sC-sE,net=pr+sB,ownBal=tInv-ownExp;
+  const now=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const genDate=`${now.getDate()} ${M[now.getMonth()]} ${now.getFullYear()}`;
+  const scope=curFlat==='ALL'?'All Flats':flatName(curFlat);
+  let flatRows='';
+  if(curFlat==='ALL'){
+    flatRows=DB.flats.map(f=>{
+      const fR=DB.rentPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0),fO=DB.ownerPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
+      const fSC=DB.svcPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0),fE=DB.expenses.filter(e=>e.flatId===f.id&&e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+      const fNet=(fR-fO)+(fSC-fE);
+      return `<tr><td>${esc(f.name)}</td><td>৳${fmt(fR)}</td><td>৳${fmt(fO)}</td><td style="font-weight:700">৳${fmt(fNet)}</td></tr>`;
+    }).join('');
+  }
+  document.getElementById('own-stmt-body').innerHTML=`
+    <div id="print-area-stmt" class="print-target" style="padding:20px">
+      <div style="text-align:center;margin-bottom:16px"><div style="font-weight:700;font-size:16px">Owner Statement</div><div style="color:var(--mu);font-size:11px">${scope} — Generated ${genDate}</div></div>
+      <table style="width:100%;font-size:13px;margin-bottom:14px">
+        <tr><td style="padding:5px 0;color:var(--mu)">Total Rent Collected</td><td style="text-align:right;font-weight:700">৳${fmt(tR)}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--mu)">Paid to Owner</td><td style="text-align:right">৳${fmt(tO)}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--mu)">Rent Profit</td><td style="text-align:right">৳${fmt(pr)}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--mu)">Service Balance</td><td style="text-align:right">৳${fmt(sB)}</td></tr>
+        <tr style="border-top:1.5px solid var(--bd)"><td style="padding:8px 0;font-weight:700">Net Balance</td><td style="text-align:right;font-weight:700;font-size:15px">৳${fmt(net)}</td></tr>
+        <tr><td style="padding:5px 0;padding-top:12px;color:var(--mu)">Total Invested (Owner Pocket)</td><td style="text-align:right;padding-top:12px">৳${fmt(tInv)}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--mu)">Owner Pocket Expense</td><td style="text-align:right">৳${fmt(ownExp)}</td></tr>
+        <tr style="border-top:1.5px solid var(--bd)"><td style="padding:8px 0;font-weight:700">Owner Pocket Balance</td><td style="text-align:right;font-weight:700">৳${fmt(ownBal)}</td></tr>
+      </table>
+      ${flatRows?`<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;padding:4px 0;border-bottom:1px solid var(--bd)">Flat</th><th style="text-align:right;border-bottom:1px solid var(--bd)">Rent ৳</th><th style="text-align:right;border-bottom:1px solid var(--bd)">Paid ৳</th><th style="text-align:right;border-bottom:1px solid var(--bd)">Net ৳</th></tr></thead><tbody>${flatRows}</tbody></table>`:''}
+    </div>`;
+  openM('m-own-stmt');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENT PAYMENTS — shows ALL active tenants incl. unpaid
+// ═══════════════════════════════════════════════════════════
+function renderRentPays(){
+  const mon=document.getElementById('rp-mon').value;
+  const yr=N(document.getElementById('rp-yr').value)||0;
+  const q=(document.getElementById('gsearch').value||'').toLowerCase();
+
+  // Build enriched list = actual payments + virtual unpaid rows for active tenants
+  let list=[];
+
+  if(mon&&yr){
+    // Show all active tenants for this month (with or without payment)
+    const monthActive=getActiveForMonth(mon,yr,curFlat);
+    monthActive.forEach(t=>{
+      const tPays=filterByFlat(DB.rentPays).filter(p=>p.tid===t.id&&p.month===mon&&p.year===yr);
+      const s=rentMonthSummary(t.id,mon,yr);
+      if(tPays.length){
+        tPays.forEach(p=>list.push({...p,_due:s.due,_carry:s.carryIn,_monthPaid:s.paid,status:s.status,_virtual:false}));
+      } else {
+        // Virtual unpaid row
+        list.push({id:'UNPAID',date:'—',flatId:t.flatId,tid:t.id,name:t.name,room:t.room,month:mon,year:yr,rentAmount:N(t.rent),paid:0,carryIn:s.carryIn,_due:s.due,_carry:s.carryIn,_monthPaid:0,status:'Unpaid',receipt:'—',method:'—',_virtual:true});
+      }
+    });
+  } else {
+    // All payments mode
+    list=filterByFlat(DB.rentPays).map(p=>{const s=rentMonthSummary(p.tid,p.month,p.year);return{...p,_due:s.due,_carry:s.carryIn,_monthPaid:s.paid,status:s.status,_virtual:false};});
+  }
+
+  list=list.filter(p=>{
+    if(rpF!=='All'&&p.status!==rpF)return false;
+    if(q&&!`${p.name} ${p.room} ${p.month} ${p.receipt} ${p.method}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  list=applySort(list,sortS.rp);
+
+  document.getElementById('rp-body').innerHTML=list.length
+    ?list.map(p=>`<tr class="${p._virtual?'virtual-row':rowC(p.status)}">
+      <td>${p._virtual?'<span style="font-size:10px;color:var(--rd);font-weight:700">NO PAYMENT</span>':fmtDate(p.date)}</td>
+      <td>${ftag(p.flatId)}</td>
+      <td><div style="display:flex;align-items:center;gap:4px"><div class="av">${esc((p.name||'?')[0])}</div>${esc(p.name)}</div></td>
+      <td><strong>${p.room}</strong></td>
+      <td>${p.month} ${p.year}</td>
+      <td>৳${fmt(p.rentAmount)}</td>
+      <td>${p._carry>0?`<span class="carry-tag">৳${fmt(p._carry)}</span>`:'—'}</td>
+      <td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td>
+      <td>৳${fmt(p._monthPaid)}</td>
+      <td style="font-weight:700;color:${p._due>0?'var(--rd)':'var(--gn)'}">৳${fmt(p._due)}</td>
+      <td>${p._virtual?'—':p.method}</td>
+      <td>${p._virtual?'—':`<span class="tag">${p.receipt}</span>`}</td>
+      <td>${badge(p.status)}</td>
+      <td>${p._virtual?'<span style="font-size:11px;color:var(--mu)">No entry</span>':`<div style="display:flex;gap:3px">${p.paid>0?`<button class="btn bs" onclick="openReceipt('rent','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button>`:''}<button class="btn bs bd_" onclick="delRP('${p.id}')"><i class="ti ti-trash"></i></button></div>`}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--mu)">No data found${mon?'':' — Select a month to see unpaid tenants'}</td></tr>`;
+}
+function fRP(f){rpF=f;document.querySelectorAll('[data-rpf]').forEach(b=>b.classList.toggle('on',b.dataset.rpf===f));renderRentPays();}
+
+function openRentPayModal(){
+  const active=filterByFlat(DB.tenants).filter(t=>t.status==='Active');
+  if(!active.length){toast('No active tenants in this flat','er');return;}
+  const sel=document.getElementById('rptid');sel.innerHTML='<option value="">-- Select --</option>';
+  active.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=`${t.id} — ${t.name} (${flatName(t.flatId)}, Rm ${t.room})`;sel.appendChild(o);});
+  document.getElementById('rpd').value=todayISO();document.getElementById('rpm').value=curMon();document.getElementById('rpy').value=curYr();
+  ['rpname','rproom','rprent','rpalr','rpcarry','rpeff','rppay','rpndue','rpstat'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('carry-box').style.display='none';document.getElementById('rp-ibox').style.display='none';
+  setBusy('save-rp',false,'<i class="ti ti-check"></i> Save Payment');openM('m-rent');
+}
+function refreshRP(){
+  const tid=document.getElementById('rptid').value,mon=document.getElementById('rpm').value,yr=N(document.getElementById('rpy').value)||curYr();
+  const t=DB.tenants.find(x=>x.id===tid);
+  if(!t||!tid){['rpname','rproom','rprent','rpalr','rpcarry','rpeff','rppay','rpndue','rpstat'].forEach(id=>document.getElementById(id).value='');document.getElementById('carry-box').style.display='none';document.getElementById('rp-ibox').style.display='none';return;}
+  document.getElementById('rpname').value=t.name;document.getElementById('rproom').value=t.room;document.getElementById('rprent').value=t.rent;
+  const carry=getCarryFwd(tid,mon,yr);
+  const alr=DB.rentPays.filter(p=>p.tid===tid&&p.month===mon&&p.year===yr).reduce((a,p)=>a+N(p.paid),0);
+  const effDue=Math.max(0,N(t.rent)-carry);
+  document.getElementById('rpalr').value=alr;document.getElementById('rpcarry').value=carry;document.getElementById('rpeff').value=effDue;document.getElementById('rppay').value='';
+  if(carry>0){document.getElementById('carry-box').style.display='flex';document.getElementById('carry-tx').innerHTML=`<b>Carry Forward: ৳${fmt(carry)}</b> from previous month. Effective due: ৳${fmt(effDue)}`;}
+  else document.getElementById('carry-box').style.display='none';
+  const rem=Math.max(0,effDue-alr);
+  document.getElementById('rp-ibox').style.display='flex';
+  document.getElementById('rp-ibox-tx').innerHTML=`<b>${t.name}</b> — ${mon} ${yr} | Rent: ৳${fmt(t.rent)} | Paid: ৳${fmt(alr)} | Remaining: ৳${fmt(rem)}`;
+  document.getElementById('rp-ibox').className='ibox '+(rem===0?'ok':alr>0?'warn':'inf');
+  calcRP();
+}
+function calcRP(){
+  const rent=N(document.getElementById('rprent').value),carry=N(document.getElementById('rpcarry').value),alr=N(document.getElementById('rpalr').value),paying=N(document.getElementById('rppay').value);
+  const effDue=Math.max(0,rent-carry),newTot=alr+paying,newDue=Math.max(0,effDue-newTot);
+  document.getElementById('rpndue').value=newDue;
+  document.getElementById('rpstat').value=(paying<=0&&alr<=0&&carry<=0)?'Unpaid':newDue===0?'Paid':'Partial';
+}
+function saveRP(){
+  const tid=document.getElementById('rptid').value;if(!tid){toast('Select tenant','er');return;}
+  if(N(document.getElementById('rppay').value)<=0){toast('Amount must be > 0','er');return;}
+  const data={date:document.getElementById('rpd').value,tid,month:document.getElementById('rpm').value,year:N(document.getElementById('rpy').value)||curYr(),paid:N(document.getElementById('rppay').value),method:document.getElementById('rpmeth').value};
+  setBusy('save-rp',true,'');
+  google.script.run.withSuccessHandler(r=>{setBusy('save-rp',false,'<i class="ti ti-check"></i> Save Payment');if(r.success){let m=`Saved — ${r.receipt}`;if(r.carryIn>0)m+=` | Carry: ৳${fmt(r.carryIn)}`;toast(m,'ok');closeM('m-rent');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-rp',false,'<i class="ti ti-check"></i> Save Payment');toast('Error: '+e,'er');}).addRentPayment(data);
+}
+function delRP(id){if(!confirm('Delete payment?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteRentPayment(id);}
+
+// ═══════════════════════════════════════════════════════════
+//  SERVICE CHARGE
+// ═══════════════════════════════════════════════════════════
+function renderSvcPays(){
+  const allA=curFlat==='ALL'?DB.tenants.filter(t=>t.status==='Active'):DB.tenants.filter(t=>t.status==='Active'&&(t.flatId===curFlat||!t.flatId));
+  const notInactive=p=>{const t=DB.tenants.find(x=>x.id===p.tid);return !t||t.status!=='Inactive';};
+  const tDue=allA.reduce((a,t)=>a+N(t.serviceCharge),0),tColl=filterByFlat(DB.svcPays).filter(notInactive).reduce((a,p)=>a+N(p.paid),0),tExp=filterByFlat(DB.expenses).reduce((a,e)=>a+N(e.amount),0);
+  const pct=tDue>0?Math.min(100,Math.round(tColl/tDue*100)):0;
+  document.getElementById('svc-ov').innerHTML=`
+    <div class="ov-item"><div class="sl">Total Due</div><div class="sv bl">৳${fmt(tDue)}</div><div class="prog"><div class="pf" style="width:${pct}%;background:var(--gn)"></div></div></div>
+    <div class="ov-item"><div class="sl">Collected</div><div class="sv gn">৳${fmt(tColl)}</div></div>
+    <div class="ov-item"><div class="sl">Remaining</div><div class="sv rd">৳${fmt(Math.max(0,tDue-tColl))}</div></div>
+    <div class="ov-item"><div class="sl">Expense Balance</div><div class="sv ${tColl>=tExp?'gn':'rd'}">৳${fmt(tColl-tExp)}</div></div>`;
+  const mon=document.getElementById('svc-mon').value,yr=N(document.getElementById('svc-yr').value);
+  let list=filterByFlat(DB.svcPays).filter(notInactive).map(p=>{const s=svcSummary(p.tid);return{...p,_due:s.due,_totalPaid:s.paid,status:s.status};});
+  if(mon)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&MONTHS[d.getMonth()]===mon;});
+  if(yr)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&d.getFullYear()===yr;});
+  if(svcF!=='All')list=list.filter(p=>p.status===svcF);
+  list=applySort(list,sortS.svc);
+  document.getElementById('svc-body').innerHTML=list.length
+    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.serviceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td><div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('service','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delSVC('${p.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('')
+    :`<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--mu)">No service payments found</td></tr>`;
+}
+function fSVC(f){svcF=f;document.querySelectorAll('[data-svcf]').forEach(b=>b.classList.toggle('on',b.dataset.svcf===f));renderSvcPays();}
+function openSvcPayModal(){
+  const active=filterByFlat(DB.tenants).filter(t=>t.status==='Active');if(!active.length){toast('No active tenants','er');return;}
+  const sel=document.getElementById('sptid');sel.innerHTML='<option value="">-- Select --</option>';
+  active.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=`${t.id} — ${t.name} (৳${fmt(t.serviceCharge)})`;sel.appendChild(o);});
+  document.getElementById('spd').value=todayISO();['sptot','spalr','sprem','sppay','spstat'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('svc-ibox').style.display='none';setBusy('save-sp',false,'<i class="ti ti-check"></i> Save');openM('m-svc');
+}
+function refreshSVC(){const tid=document.getElementById('sptid').value;const t=DB.tenants.find(x=>x.id===tid);if(!t||!tid)return;const s=svcSummary(tid);document.getElementById('sptot').value=t.serviceCharge;document.getElementById('spalr').value=s.paid;document.getElementById('sprem').value=s.due;document.getElementById('sppay').value='';document.getElementById('spstat').value='';document.getElementById('svc-ibox').style.display='flex';document.getElementById('svc-ibox-tx').innerHTML=`<b>${t.name}</b> — Service: ৳${fmt(t.serviceCharge)} | Paid: ৳${fmt(s.paid)} | Remaining: ৳${fmt(s.due)}`;document.getElementById('svc-ibox').className='ibox '+(s.status==='Paid'?'ok':s.status==='Partial'?'warn':'inf');calcSVC();}
+function calcSVC(){const tot=N(document.getElementById('sptot').value),alr=N(document.getElementById('spalr').value),p=N(document.getElementById('sppay').value);const np=alr+p,nd=Math.max(0,tot-np);document.getElementById('spstat').value=np<=0?'Unpaid':nd===0?'Paid':'Partial';}
+function saveSVC(){const tid=document.getElementById('sptid').value;if(!tid){toast('Select tenant','er');return;}if(N(document.getElementById('sppay').value)<=0){toast('Amount must be > 0','er');return;}const data={date:document.getElementById('spd').value,tid,paid:N(document.getElementById('sppay').value),method:document.getElementById('spmeth').value};setBusy('save-sp',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-sp',false,'<i class="ti ti-check"></i> Save');if(r.success){toast('Saved — '+r.receipt,'ok');closeM('m-svc');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-sp',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addServicePayment(data);}
+function delSVC(id){if(!confirm('Delete?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteServicePayment(id);}
+
+// ═══════════════════════════════════════════════════════════
+//  ADVANCE MONEY
+// ═══════════════════════════════════════════════════════════
+function renderAdvPays(){
+  const allA=curFlat==='ALL'?DB.tenants.filter(t=>t.status==='Active'):DB.tenants.filter(t=>t.status==='Active'&&(t.flatId===curFlat||!t.flatId));
+  const notInactive=p=>{const t=DB.tenants.find(x=>x.id===p.tid);return !t||t.status!=='Inactive';};
+  const tDue=allA.reduce((a,t)=>a+N(t.advanceDue),0),tColl=filterByFlat(DB.advPays).filter(notInactive).reduce((a,p)=>a+N(p.paid),0);
+  const pct=tDue>0?Math.min(100,Math.round(tColl/tDue*100)):0;
+  document.getElementById('adv-ov').innerHTML=`
+    <div class="ov-item"><div class="sl">Total Due</div><div class="sv bl">৳${fmt(tDue)}</div><div class="prog"><div class="pf" style="width:${pct}%;background:var(--gn)"></div></div></div>
+    <div class="ov-item"><div class="sl">Collected</div><div class="sv gn">৳${fmt(tColl)}</div></div>
+    <div class="ov-item"><div class="sl">Remaining</div><div class="sv rd">৳${fmt(Math.max(0,tDue-tColl))}</div></div>`;
+  const mon=document.getElementById('adv-mon').value,yr=N(document.getElementById('adv-yr').value);
+  let list=filterByFlat(DB.advPays).filter(notInactive).map(p=>{const s=advSummary(p.tid);return{...p,_due:s.due,_totalPaid:s.paid,status:s.status};});
+  if(mon)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&MONTHS[d.getMonth()]===mon;});
+  if(yr)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&d.getFullYear()===yr;});
+  if(advF!=='All')list=list.filter(p=>p.status===advF);
+  list=applySort(list,sortS.adv);
+  document.getElementById('adv-body').innerHTML=list.length
+    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.advanceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td><div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('advance','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delADV('${p.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('')
+    :`<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--mu)">No advance payments found</td></tr>`;
+}
+function fADV(f){advF=f;document.querySelectorAll('[data-advf]').forEach(b=>b.classList.toggle('on',b.dataset.advf===f));renderAdvPays();}
+function openAdvPayModal(){
+  const active=filterByFlat(DB.tenants).filter(t=>t.status==='Active');if(!active.length){toast('No active tenants','er');return;}
+  const sel=document.getElementById('aptid');sel.innerHTML='<option value="">-- Select --</option>';
+  active.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=`${t.id} — ${t.name} (৳${fmt(t.advanceDue)})`;sel.appendChild(o);});
+  document.getElementById('apd').value=todayISO();['aptot','apalr','aprem','appay','apstat'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('adv-ibox').style.display='none';setBusy('save-ap',false,'<i class="ti ti-check"></i> Save');openM('m-adv');
+}
+function refreshADV(){const tid=document.getElementById('aptid').value;const t=DB.tenants.find(x=>x.id===tid);if(!t||!tid)return;const s=advSummary(tid);document.getElementById('aptot').value=t.advanceDue;document.getElementById('apalr').value=s.paid;document.getElementById('aprem').value=s.due;document.getElementById('appay').value='';document.getElementById('apstat').value='';document.getElementById('adv-ibox').style.display='flex';document.getElementById('adv-ibox-tx').innerHTML=`<b>${t.name}</b> — Advance: ৳${fmt(t.advanceDue)} | Paid: ৳${fmt(s.paid)} | Remaining: ৳${fmt(s.due)}`;document.getElementById('adv-ibox').className='ibox '+(s.status==='Paid'?'ok':s.status==='Partial'?'warn':'inf');calcADV();}
+function calcADV(){const tot=N(document.getElementById('aptot').value),alr=N(document.getElementById('apalr').value),p=N(document.getElementById('appay').value);const np=alr+p,nd=Math.max(0,tot-np);document.getElementById('apstat').value=np<=0?'Unpaid':nd===0?'Paid':'Partial';}
+function saveADV(){const tid=document.getElementById('aptid').value;if(!tid){toast('Select tenant','er');return;}if(N(document.getElementById('appay').value)<=0){toast('Amount must be > 0','er');return;}const data={date:document.getElementById('apd').value,tid,paid:N(document.getElementById('appay').value),method:document.getElementById('apmeth').value};setBusy('save-ap',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-ap',false,'<i class="ti ti-check"></i> Save');if(r.success){toast('Saved — '+r.receipt,'ok');closeM('m-adv');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-ap',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addAdvancePayment(data);}
+function delADV(id){if(!confirm('Delete?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteAdvancePayment(id);}
+
+// ═══════════════════════════════════════════════════════════
+//  DUE TRACKER
+// ═══════════════════════════════════════════════════════════
+function switchDueTab(tab){dueTab=tab;document.querySelectorAll('[data-dt]').forEach(b=>b.classList.toggle('on',b.dataset.dt===tab));renderDue();}
+function renderDue(){
+  const mon=document.getElementById('due-mon').value,yr=N(document.getElementById('due-yr').value)||curYr();
+  const allMonths=!mon;
+  const occupiedTens=allMonths?DB.tenants.filter(t=>t.status==='Active'&&(curFlat==='ALL'||t.flatId===curFlat||!t.flatId)):getActiveForMonth(mon,yr,curFlat);
+  const allActTens=curFlat==='ALL'?DB.tenants.filter(t=>t.status==='Active'):DB.tenants.filter(t=>t.status==='Active'&&(t.flatId===curFlat||!t.flatId));
+
+  if(dueTab==='rent'){
+    document.getElementById('due-tab-title').textContent=allMonths?'Rent Due — All Months':`Rent Due — ${mon} ${yr}`;
+    document.getElementById('due-thead').innerHTML='<tr><th>Flat</th><th>Tenant</th><th>Room</th><th>Rent ৳</th><th>Carry ৳</th><th>Paid ৳</th><th>Due ৳</th><th>Last Pay</th><th>Status</th><th>Remind</th></tr>';
+    let rows=occupiedTens.map(t=>{
+      const s=allMonths?cumulativeRentSummary(t.id):rentMonthSummary(t.id,mon,yr);
+      const pays=allMonths?DB.rentPays.filter(p=>p.tid===t.id):DB.rentPays.filter(p=>p.tid===t.id&&p.month===mon&&p.year===yr);
+      return{...t,...s,lastDate:pays.length?fmtDate(pays[pays.length-1].date):'—',_due:s.due};
+    });
+    rows=applySort(rows,sortS.due).sort((a,b)=>({Unpaid:0,Partial:1,Paid:2}[a.status]||0)-({Unpaid:0,Partial:1,Paid:2}[b.status]||0));
+    const totalDue=rows.reduce((a,r)=>a+r.due,0);
+    document.getElementById('due-cards').innerHTML=[['৳'+fmt(totalDue),'Total Due','ti-alert-circle','rd'],[rows.filter(r=>r.status==='Unpaid').length,'Unpaid','ti-circle-x','rd'],[rows.filter(r=>r.status==='Partial').length,'Partial','ti-clock','am'],[rows.filter(r=>r.status==='Paid').length,'Paid','ti-circle-check','gn']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+    document.getElementById('due-body').innerHTML=rows.length
+      ?rows.map(r=>`<tr class="${rowC(r.status)}"><td>${ftag(r.flatId)}</td><td><div style="display:flex;align-items:center;gap:4px"><div class="av">${esc((r.name||'?')[0])}</div>${esc(r.name)}</div></td><td><strong>${r.room}</strong></td><td>৳${fmt(r.rent)}</td><td>${r.carryIn>0?`<span class="carry-tag">৳${fmt(r.carryIn)}</span>`:'—'}</td><td style="color:var(--gn);font-weight:700">৳${fmt(r.paid)}</td><td style="font-weight:700;color:${r.due>0?'var(--rd)':'var(--gn)'}">৳${fmt(r.due)}</td><td style="color:var(--mu);font-size:11px">${r.lastDate}</td><td>${badge(r.status)}</td><td>${r.due>0?remindBtn(r,mon,yr):'—'}</td></tr>`).join('')
+      :`<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--mu)">No active tenants this month</td></tr>`;
+  } else if(dueTab==='service'){
+    document.getElementById('due-tab-title').textContent='Service Charge Due';
+    document.getElementById('due-thead').innerHTML='<tr><th>Flat</th><th>Tenant</th><th>Room</th><th>Total ৳</th><th>Paid ৳</th><th>Due ৳</th><th>Status</th></tr>';
+    let rows=allActTens.map(t=>{const s=svcSummary(t.id);return{...t,...s,_due:s.due};}).sort((a,b)=>({Unpaid:0,Partial:1,Paid:2}[a.status]||0)-({Unpaid:0,Partial:1,Paid:2}[b.status]||0));
+    rows=applySort(rows,sortS.due);
+    const totalDue=rows.reduce((a,r)=>a+r.due,0);
+    document.getElementById('due-cards').innerHTML=[['৳'+fmt(totalDue),'Service Due','ti-tool','rd'],[rows.filter(r=>r.status==='Unpaid').length,'Unpaid','ti-circle-x','rd'],[rows.filter(r=>r.status==='Partial').length,'Partial','ti-clock','am'],[rows.filter(r=>r.status==='Paid').length,'Paid','ti-circle-check','gn']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+    document.getElementById('due-body').innerHTML=rows.length?rows.map(r=>`<tr class="${rowC(r.status)}"><td>${ftag(r.flatId)}</td><td><div style="display:flex;align-items:center;gap:4px"><div class="av">${esc((r.name||'?')[0])}</div>${esc(r.name)}</div></td><td>${r.room}</td><td>৳${fmt(r.total)}</td><td style="color:var(--gn);font-weight:700">৳${fmt(r.paid)}</td><td style="font-weight:700;color:${r.due>0?'var(--rd)':'var(--gn)'}">৳${fmt(r.due)}</td><td>${badge(r.status)}</td></tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--mu)">No data</td></tr>`;
+  } else {
+    document.getElementById('due-tab-title').textContent='Advance Money Due';
+    document.getElementById('due-thead').innerHTML='<tr><th>Flat</th><th>Tenant</th><th>Room</th><th>Total ৳</th><th>Paid ৳</th><th>Due ৳</th><th>Status</th></tr>';
+    let rows=allActTens.map(t=>{const s=advSummary(t.id);return{...t,...s,_due:s.due};}).sort((a,b)=>({Unpaid:0,Partial:1,Paid:2}[a.status]||0)-({Unpaid:0,Partial:1,Paid:2}[b.status]||0));
+    rows=applySort(rows,sortS.due);
+    const totalDue=rows.reduce((a,r)=>a+r.due,0);
+    document.getElementById('due-cards').innerHTML=[['৳'+fmt(totalDue),'Advance Due','ti-coin','rd'],[rows.filter(r=>r.status==='Unpaid').length,'Unpaid','ti-circle-x','rd'],[rows.filter(r=>r.status==='Partial').length,'Partial','ti-clock','am'],[rows.filter(r=>r.status==='Paid').length,'Paid','ti-circle-check','gn']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('');
+    document.getElementById('due-body').innerHTML=rows.length?rows.map(r=>`<tr class="${rowC(r.status)}"><td>${ftag(r.flatId)}</td><td><div style="display:flex;align-items:center;gap:4px"><div class="av">${esc((r.name||'?')[0])}</div>${esc(r.name)}</div></td><td>${r.room}</td><td>৳${fmt(r.total)}</td><td style="color:var(--gn);font-weight:700">৳${fmt(r.paid)}</td><td style="font-weight:700;color:${r.due>0?'var(--rd)':'var(--gn)'}">৳${fmt(r.due)}</td><td>${badge(r.status)}</td></tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--mu)">No data</td></tr>`;
+  }
+}
+
+// ── Feature: WhatsApp click-to-send reminder + Generate Dues + Email Digest ─
+function waLink(phone,text){
+  let p=(phone||'').replace(/\D/g,'');
+  if(!p) return null;
+  if(p.startsWith('0')) p='88'+p.slice(1);
+  else if(!p.startsWith('88')) p='88'+p;
+  return 'https://wa.me/'+p+'?text='+encodeURIComponent(text);
+}
+function remindBtn(r,mon,yr){
+  const label=mon?`${mon} ${yr} মাসের`:'সর্বমোট বকেয়া';
+  const msg=`Assalamu Alaikum ${r.name},\n${label} বাসা ভাড়া বাবদ ৳${fmt(r.due)} বাকি আছে। দয়া করে দ্রুত পরিশোধ করবেন। ধন্যবাদ।`;
+  const link=waLink(r.phone,msg);
+  return link?`<a class="btn bs" style="background:#25D366;color:#fff;border-color:#25D366" href="${link}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>`:`<span style="color:var(--mu);font-size:11px">no phone</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPENSES
+// ═══════════════════════════════════════════════════════════
+let expF='All';
+function fExp(v){expF=v;document.querySelectorAll('[data-expf]').forEach(b=>b.classList.toggle('on',b.dataset.expf===v));renderExpenses();}
+function renderExpenses(){
+  const mon=document.getElementById('exp-mon').value,yr=N(document.getElementById('exp-yr').value);
+  let list=filterByFlat(DB.expenses);
+  if(mon) list=list.filter(e=>{const d=new Date(e.date);return MONTHS[d.getMonth()]===mon;});
+  if(yr) list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===yr;});
+  const svcColl=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0);
+  const svcExp=list.filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+  const ownExp=list.filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const svcBal=svcColl-svcExp;
+  const totalInvested=filterByFlat(DB.investments).reduce((a,i)=>a+N(i.amount),0);
+  const ownExpAllTime=filterByFlat(DB.expenses).filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const ownBal=totalInvested-ownExpAllTime;
+  const advColl=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0);
+  const advExpAllTime=filterByFlat(DB.expenses).filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
+  const advBal=advColl-advExpAllTime;
+  document.getElementById('exp-cards').innerHTML=`
+    <div class="stl" style="margin-top:0"><i class="ti ti-tool"></i>Service Charge</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(svcColl),'Svc Collected (all-time)','ti-cash','gn'],['৳'+fmt(svcExp),'Service-Funded Expense','ti-receipt','rd'],['৳'+fmt(svcBal),'Service Balance','ti-wallet',svcBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-wallet-off"></i>Owner Pocket</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(totalInvested),'Total Invested','ti-hammer','pu'],['৳'+fmt(ownExpAllTime),'Owner Pocket Expense (all-time)','ti-receipt','rd'],['৳'+fmt(ownBal),'Owner Pocket Balance','ti-wallet',ownBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-coin"></i>Advance Money (tenant-দের advance collection থেকে খরচ)</div>
+    <div class="cards">${[['৳'+fmt(advColl),'Advance Collected (all-time)','ti-cash','gn'],['৳'+fmt(advExpAllTime),'Advance-Funded Expense','ti-receipt','rd'],['৳'+fmt(advBal),'Advance Balance','ti-wallet',advBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>`;
+  if(expF!=='All') list=list.filter(e=>e.source===expF);
+  document.getElementById('exp-body').innerHTML=[...list].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr class="ror"><td>${fmtDate(e.date)}</td><td>${ftag(e.flatId)}</td><td style="font-weight:600">${esc(e.title)}</td><td><span class="badge ${e.source==='Owner Pocket'?'bpu':e.source==='Advance Money'?'bor':'bbl'}">${esc(e.source)}</span></td><td style="font-weight:700;color:var(--rd)">৳${fmt(e.amount)}</td><td style="color:var(--mu)">${esc(e.notes)}</td><td>${canDelete('expenses')?`<button class="btn bs bd_" onclick="delExp('${e.id}')"><i class="ti ti-trash"></i></button>`:''}</td></tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--mu)">No expenses</td></tr>`;
+}
+function openExpModal(){
+  populateFlatDropdowns();
+  document.getElementById('exd').value=todayISO();['extitle','examt','exnote'].forEach(id=>document.getElementById(id).value='');document.getElementById('exsrc').value='Service Charge';
+  setBusy('save-ex',false,'<i class="ti ti-check"></i> Save');openM('m-exp');
+}
+function saveExp(){const title=document.getElementById('extitle').value.trim(),amt=N(document.getElementById('examt').value);if(!title||amt<=0){toast('Title & amount required','er');return;}const data={date:document.getElementById('exd').value,flatId:document.getElementById('ex-flat').value,title,amount:amt,source:document.getElementById('exsrc').value,notes:document.getElementById('exnote').value.trim()};setBusy('save-ex',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-ex',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-exp');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-ex',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addServiceExpense(data);}
+function delExp(id){if(!confirm('Delete expense?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteServiceExpense(id);}
+
+// ═══════════════════════════════════════════════════════════
+//  OWNER PANEL — per-flat breakdown + combined
+// ═══════════════════════════════════════════════════════════
+function renderOwners(){
+  const tRent=filterByFlat(DB.rentPays).reduce((a,p)=>a+N(p.paid),0);
+  const tOwner=filterByFlat(DB.ownerPays).reduce((a,p)=>a+N(p.paid),0);
+  const tInv=filterByFlat(DB.investments).reduce((a,i)=>a+N(i.amount),0);
+  const svcColl=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0);
+  const svcExp=filterByFlat(DB.expenses).filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+  const ownExp=filterByFlat(DB.expenses).filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const advTenantColl=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0);
+  const advExp=filterByFlat(DB.expenses).filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
+  const advBal=advTenantColl-advExp;
+  const rentProfit=tRent-tOwner,svcBal=svcColl-svcExp,net=rentProfit+svcBal,ownBal=tInv-ownExp;
+  const advColl=filterByFlat(DB.ownerAdvances).reduce((a,x)=>a+N(x.amount),0);
+  document.getElementById('own-cards').innerHTML=`
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(tRent),'Rent Collected','ti-cash','gn'],['৳'+fmt(tOwner),'Owner Paid','ti-home','rd'],['৳'+fmt(rentProfit),'Rent Profit','ti-trending-up',rentProfit>=0?'gn':'rd'],['৳'+fmt(svcBal),'Service Balance','ti-tool',svcBal>=0?'gn':'rd'],['৳'+fmt(net),'Net Balance','ti-wallet',net>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-wallet-off"></i>Owner Pocket</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(tInv),'Total Invested','ti-hammer','pu'],['৳'+fmt(ownExp),'Owner Pocket Expense','ti-receipt','rd'],['৳'+fmt(ownBal),'Owner Pocket Balance','ti-wallet',ownBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-pig-money"></i>Advance Money (Tenant Deposits)</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(advTenantColl),'Total Collected','ti-arrow-down-circle','gn'],['৳'+fmt(advExp),'Refunded / Spent','ti-receipt','rd'],['৳'+fmt(advBal),'Held (Liability)','ti-lock',advBal>=0?'am':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-coin"></i>Owner Advance Money</div>
+    <div class="cards">${[['৳'+fmt(advColl),'Total Advance Given to Owner','ti-arrow-up-circle','or']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>`;
+
+  // Per-flat breakdown
+  if(curFlat==='ALL'&&DB.flats.length>0){
+    document.getElementById('flat-profit-section').innerHTML=`
+      <div class="stl"><i class="ti ti-building"></i>Per-Flat Profit Breakdown</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Flat</th><th>Owner</th><th>Rent Collected ৳</th><th>Owner Paid ৳</th><th>Rent Profit ৳</th><th>Service Bal ৳</th><th>Net ৳</th><th>Investment ৳</th></tr></thead><tbody>
+        ${DB.flats.map(f=>{
+          const fR=DB.rentPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
+          const fO=DB.ownerPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
+          const fI=DB.investments.filter(i=>i.flatId===f.id).reduce((a,i)=>a+N(i.amount),0);
+          const fSC=DB.svcPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
+          const fE=DB.expenses.filter(e=>e.flatId===f.id&&e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+          const fPr=fR-fO,fSB=fSC-fE,fNet=fPr+fSB;
+          return`<tr><td>${ftag(f.id)} ${esc(f.name)}</td><td style="color:var(--mu)">${esc(f.ownerName)}</td><td style="color:var(--gn);font-weight:700">৳${fmt(fR)}</td><td style="color:var(--rd)">৳${fmt(fO)}</td><td style="font-weight:700;color:${fPr>=0?'var(--gn)':'var(--rd)'}">৳${fmt(fPr)}</td><td style="color:${fSB>=0?'var(--gn)':'var(--rd)'}">৳${fmt(fSB)}</td><td style="font-weight:700;color:${fNet>=0?'var(--gn)':'var(--rd)'}">৳${fmt(fNet)}</td><td style="color:var(--pu)">৳${fmt(fI)}</td></tr>`;
+        }).join('')}
+        <tr class="sumr"><td colspan="2">TOTAL</td><td>৳${fmt(tRent)}</td><td>৳${fmt(tOwner)}</td><td>৳${fmt(rentProfit)}</td><td>৳${fmt(svcBal)}</td><td>৳${fmt(net)}</td><td>৳${fmt(tInv)}</td></tr>
+      </tbody></table></div>`;
+  } else document.getElementById('flat-profit-section').innerHTML='';
+
+  document.getElementById('own-pay-body').innerHTML=[...filterByFlat(DB.ownerPays)].filter(ownDateFilter).sort((a,b)=>N(a.year)-N(b.year)||MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month)).map(p=>`<tr class="rp"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.month)} ${p.year}</td><td>৳${fmt(p.flatRent)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>${esc(p.method)}</td><td style="color:var(--mu)">${esc(p.notes)}</td><td><div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('owner','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delOP('${p.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('')||`<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--mu)">No payments</td></tr>`;
+  document.getElementById('inv-body').innerHTML=[...filterByFlat(DB.investments)].filter(ownDateFilter).sort((a,b)=>a.date.localeCompare(b.date)).map(i=>`<tr class="rpu"><td>${fmtDate(i.date)}</td><td>${ftag(i.flatId)}</td><td style="font-weight:600">${esc(i.title)}</td><td style="font-weight:700;color:var(--pu)">৳${fmt(i.amount)}</td><td style="color:var(--mu)">${esc(i.notes)}</td><td><button class="btn bs bd_" onclick="delInv('${i.id}')"><i class="ti ti-trash"></i></button></td></tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--mu)">No investments</td></tr>`;
+  document.getElementById('oa-body').innerHTML=[...filterByFlat(DB.ownerAdvances)].filter(ownDateFilter).sort((a,b)=>a.date.localeCompare(b.date)).map(a=>`<tr class="ror"><td>${fmtDate(a.date)}</td><td>${ftag(a.flatId)}</td><td style="font-weight:700;color:var(--or)">৳${fmt(a.amount)}</td><td>${esc(a.method)}</td><td style="color:var(--mu)">${esc(a.notes)}</td><td><div style="display:flex;gap:3px">${canEdit('owners')?`<button class="btn bs" onclick="openEditOwnerAdv('${a.id}')"><i class="ti ti-edit"></i></button>`:''}${canDelete('owners')?`<button class="btn bs bd_" onclick="delOwnerAdv('${a.id}')"><i class="ti ti-trash"></i></button>`:''}</div></td></tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--mu)">No advance entries</td></tr>`;
+}
+function openOwnerPayModal(){populateFlatDropdowns();document.getElementById('opd').value=todayISO();document.getElementById('opm').value=curMon();document.getElementById('opy').value=curYr();['opflat','oppaid','opnote'].forEach(id=>document.getElementById(id).value='');setBusy('save-op',false,'<i class="ti ti-check"></i> Save');openM('m-opay');}
+function saveOwnerPay(){const paid=N(document.getElementById('oppaid').value),flat=N(document.getElementById('opflat').value);if(paid<=0||flat<=0){toast('Enter valid amounts','er');return;}const data={date:document.getElementById('opd').value,flatId:document.getElementById('op-flat').value,month:document.getElementById('opm').value,year:N(document.getElementById('opy').value),flatRent:flat,paid,method:document.getElementById('opmeth').value,notes:document.getElementById('opnote').value.trim()};setBusy('save-op',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-op',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-opay');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-op',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addOwnerPayment(data);}
+function delOP(id){if(!confirm('Delete?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteOwnerPayment(id);}
+function openInvModal(){populateFlatDropdowns();document.getElementById('invd').value=todayISO();['invtitle','invamt','invnote'].forEach(id=>document.getElementById(id).value='');setBusy('save-inv',false,'<i class="ti ti-check"></i> Save');openM('m-inv');}
+function saveInv(){const title=document.getElementById('invtitle').value.trim(),amt=N(document.getElementById('invamt').value);if(!title||amt<=0){toast('Title & amount required','er');return;}const data={date:document.getElementById('invd').value,flatId:document.getElementById('inv-flat').value,title,amount:amt,notes:document.getElementById('invnote').value.trim()};setBusy('save-inv',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-inv',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-inv');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-inv',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addInvestment(data);}
+function delInv(id){if(!confirm('Delete?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteInvestment(id);}
+
+// ── Owner Panel month/year filter (applies to Owner Payments, Investments, Owner Advance tables) ──
+function ownDateFilter(x){
+  const mon=document.getElementById('own-mon').value,yr=N(document.getElementById('own-yr').value);
+  if(mon){const d=new Date(x.date);if(isNaN(d)||MONTHS[d.getMonth()]!==mon)return false;}
+  if(yr){const d=new Date(x.date);if(isNaN(d)||d.getFullYear()!==yr)return false;}
+  return true;
+}
+
+// ── Owner Advance Money (money owner gave when flat was taken) ──
+function openOwnerAdvModal(){
+  editOwnerAdvId=null;document.getElementById('oadv-modal-title').textContent='Add Owner Advance';
+  populateFlatDropdowns();document.getElementById('oad').value=todayISO();
+  ['oaamt','oanote'].forEach(id=>document.getElementById(id).value='');document.getElementById('oameth').value='Cash';
+  setBusy('save-oa',false,'<i class="ti ti-check"></i> Save');openM('m-oadv');
+}
+function openEditOwnerAdv(id){
+  const a=DB.ownerAdvances.find(x=>x.id===id);if(!a)return;
+  editOwnerAdvId=id;document.getElementById('oadv-modal-title').textContent='Edit Owner Advance';
+  populateFlatDropdowns();document.getElementById('oa-flat').value=a.flatId||'';
+  document.getElementById('oad').value=a.date||todayISO();document.getElementById('oaamt').value=a.amount;
+  document.getElementById('oameth').value=a.method||'Cash';document.getElementById('oanote').value=a.notes||'';
+  setBusy('save-oa',false,'<i class="ti ti-check"></i> Update');openM('m-oadv');
+}
+function saveOwnerAdv(){
+  const amt=N(document.getElementById('oaamt').value),flat=document.getElementById('oa-flat').value;
+  if(!flat){toast('Flat select করুন','er');return;}
+  if(amt<=0){toast('Valid amount দিন','er');return;}
+  const data={id:editOwnerAdvId,date:document.getElementById('oad').value,flatId:flat,amount:amt,method:document.getElementById('oameth').value,notes:document.getElementById('oanote').value.trim()};
+  setBusy('save-oa',true,'');
+  const fn=editOwnerAdvId?'updateOwnerAdvance':'addOwnerAdvance';
+  google.script.run.withSuccessHandler(r=>{setBusy('save-oa',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-oadv');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-oa',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');})[fn](data);
+}
+function delOwnerAdv(id){if(!confirm('Delete this advance entry?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteOwnerAdvance(id);}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  try{if(localStorage.getItem('mess_dark')==='1'){document.body.classList.add('dark');document.getElementById('dark-ic').className='ti ti-sun';}}catch(e){}
+  document.getElementById('d-mon').value=curMon();
+  document.getElementById('d-yr').value=curYr();
+  document.getElementById('rp-yr').value=curYr();
+  document.getElementById('svc-yr').value=curYr();
+  document.getElementById('adv-yr').value=curYr();
+  document.getElementById('own-yr').value=curYr();
+  document.getElementById('due-mon').value=curMon();
+  document.getElementById('due-yr').value=curYr();
+  bootstrapApp();
+});
+
+window.addEventListener('resize',()=>{if(window.innerWidth>768)closeSidebar();});
+
+</script>
+</body>
+</html>

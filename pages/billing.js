@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { requireOrgUser } from '../lib/guard';
 import { PLANS, PAYMENT_NUMBERS } from '../lib/plans';
-import Layout from '../components/Layout';
 
 export async function getServerSideProps({ req }) {
   const result = await requireOrgUser(req);
@@ -61,8 +60,15 @@ export default function Billing({ status, daysLeft, layoutProps }) {
   }
 
   return (
-    <Layout {...layoutProps}>
-      <div style={{ maxWidth: 640 }}>
+    <div className="auth-wrap" style={{ alignItems: 'flex-start', paddingTop: 50 }}>
+      <div style={{ maxWidth: 640, width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div className="auth-logo" style={{ marginBottom: 0 }}>
+            <span className="ic"><i className="ti ti-building-community"></i></span><span className="tx">{layoutProps.orgName}</span>
+          </div>
+          <a href="/dashboard" className="btn bs" style={{ marginLeft: 'auto' }}>← ড্যাশবোর্ডে ফিরুন</a>
+        </div>
+
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>বিলিং ও সাবস্ক্রিপশন</h1>
 
         {status === 'expired' && (
@@ -143,6 +149,6 @@ export default function Billing({ status, daysLeft, layoutProps }) {
           </form>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }

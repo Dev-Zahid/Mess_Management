@@ -37,7 +37,7 @@ export default function Signup() {
   return (
     <div className="auth-wrap">
       <div className="card auth-card">
-        <div className="auth-logo"><span className="ic">🏠</span><span className="tx">Mess Manager</span></div>
+        <div className="auth-logo"><span className="ic"><i className="ti ti-building-community"></i></span><span className="tx">Mess Manager</span></div>
         <div className="auth-title">ফ্রি ট্রায়াল শুরু করুন</div>
         <div className="auth-sub">{TRIAL_DAYS} দিন সম্পূর্ণ ফ্রি — কোনো কার্ড লাগবে না</div>
 
