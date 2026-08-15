@@ -268,3 +268,47 @@ FAQ, footer — সব) সংশ্লিষ্ট ভাষায় বদল
 
 ⚠️ App-এর ভেতরের অংশ (dashboard, Team/PINs ইত্যাদি) এখনো শুধু বাংলায় আছে — এই টগল শুধু পাবলিক ল্যান্ডিং
 পেজের জন্য।
+
+---
+
+## এই সেশনে (v9) — দুইটা এরর নিয়ে
+
+### ১. 🔴 আসল বাগ ফিক্স হয়েছে: "max clients reached in session mode"
+
+**কারণ কী ছিল:** দুটো জিনিস একসাথে মিলে এই সমস্যা করেছে —
+
+1. `lib/db.js`-এ Prisma client শুধু **development**-এ cache হতো, **production**-এ (Vercel-এ যেটা আসলে
+   চলে) প্রতিবার নতুন client তৈরি হতো — প্রতিটা নতুন client মানে নতুন database connection।
+2. `.env`-এ Supabase-এর **"Session" mode** connection string ব্যবহার হচ্ছিল (port 5432), যেটা মাত্র
+   **১৫টা** concurrent connection-এ hard-capped (Supabase free tier)। Vercel-এ একসাথে অনেকগুলো
+   serverless function instance চলতে পারে, প্রত্যেকে নিজের connection ধরে রাখে — তাই দ্রুতই ১৫-এর
+   limit ছাড়িয়ে যায় আর "FATAL: max clients reached" এরর আসে।
+
+**যা ফিক্স করা হয়েছে:**
+- `lib/db.js` — এখন production-এও Prisma client cache হয় (Vercel-এর warm serverless container-এ
+  reuse হবে, connection leak কমবে)।
+- `.env.example` — এখন দুটো আলাদা URL চায়:
+  - `DATABASE_URL` — Supabase-এর **"Transaction"** pooler connection string (port **6543**,
+    `?pgbouncer=true` সহ) — এটা app runtime-এ ব্যবহার হয়, অনেক বেশি concurrent connection handle
+    করতে পারে।
+  - `DIRECT_URL` — সাধারণ direct connection (port 5432) — শুধু `npm run db:push`/migration চালানোর
+    সময় লাগে, কারণ schema change pooler দিয়ে ঠিকভাবে কাজ করে না।
+- `prisma/schema.prisma`-এ `directUrl` যোগ করা হয়েছে এই dual-connection pattern সাপোর্ট করার জন্য
+  (এটা Prisma-র নিজস্ব official recommendation Supabase + Vercel-এর জন্য)।
+
+**⚠️ তোমাকে যা করতে হবে (deploy করার আগে):**
+1. Supabase Dashboard → Project Settings → Database → Connection string-এ গিয়ে **"Transaction"**
+   ট্যাব থেকে URL কপি করে Vercel-এর `DATABASE_URL` environment variable আপডেট করো (এখন যেটা আছে সেটা
+   সম্ভবত "Session" ট্যাবেরটা, port 5432 দিয়ে শেষ — সেটা বদলাতে হবে)।
+2. একই পেজ থেকে direct URL (port 5432) কপি করে নতুন `DIRECT_URL` environment variable হিসেবে Vercel-এ
+   যোগ করো।
+3. Vercel-এ redeploy করো।
+
+### ২. ✅ এটা আমাদের bug না — Browser extension-এর এরর
+
+দ্বিতীয় স্ক্রিনশটের এররটা ("Cannot read properties of undefined reading 'M_ID'") আমাদের কোডের কোথাও
+থেকে আসছে না — screenshot-এর Call Stack-এ স্পষ্ট দেখা যাচ্ছে এটা
+`chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/...` থেকে আসছে, মানে এটা তোমার ব্রাউজারে ইনস্টল
+করা কোনো একটা **extension** (ad-blocker, password manager, বা অন্য কিছু) পেজে script ঢুকিয়ে দিচ্ছে
+আর নিজেই ক্র্যাশ করছে। আমি পুরো কোডবেসে `M_ID` লিখে সার্চ করেছি — কোথাও নেই। যাচাই করতে চাইলে
+Incognito window-এ (extension বন্ধ থাকে by default) সাইটটা খুলে দেখো, এই এরর আর আসবে না।
