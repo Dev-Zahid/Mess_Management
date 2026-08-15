@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { requireOrgUser } from '../lib/guard';
+
+export async function getServerSideProps({ req }) {
+  const result = await requireOrgUser(req);
+  if (result.redirect) return result;
+  const { status } = result;
+  if (status === 'expired' || status === 'suspended') {
+    return { redirect: { destination: '/billing?locked=1', permanent: false } };
+  }
+  return { props: {} };
+}
+
+export default function ImportPage() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [result, setResult] = useState(null);
+
+  function onFileChange(e) {
+    setFile(e.target.files[0] || null);
+    setPreview(null);
+    setErr('');
+    setResult(null);
+  }
+
+  async function runPreview() {
+    if (!file) return setErr('আগে একটা ফাইল বেছে নিন');
+    setErr('');
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('mode', 'preview');
+      const res = await fetch('/api/import/process', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'ফাইল পড়া যায়নি');
+      setPreview(data);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runCommit() {
+    if (!file) return;
+    setErr('');
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('mode', 'commit');
+      const res = await fetch('/api/import/process', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'ইমপোর্ট ব্যর্থ হয়েছে');
+      setResult(data);
+      setPreview(null);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="auth-wrap" style={{ alignItems: 'flex-start', paddingTop: 50 }}>
+      <div style={{ maxWidth: 720, width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div className="auth-logo" style={{ marginBottom: 0 }}>
+            <span className="ic"><i className="ti ti-building-community"></i></span><span className="tx">ডেটা ইমপোর্ট</span>
+          </div>
+          <a href="/dashboard" className="btn bs" style={{ marginLeft: 'auto' }}>← ড্যাশবোর্ডে ফিরুন</a>
+        </div>
+
+        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>আগের ডেটা ইমপোর্ট করুন</h1>
+        <p style={{ color: 'var(--mu)', fontSize: 13.5, marginBottom: 24 }}>
+          খাতা বা পুরনো Excel/Sheet থেকে আপনার আগের ফ্ল্যাট, টেনেন্ট, আর গত কয়েক মাসের ভাড়ার হিসাব একসাথে
+          যোগ করে দিন — নতুন করে টাইপ করার দরকার নেই।
+        </p>
+
+        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 10 }}>ধাপ ১ — টেমপ্লেট ডাউনলোড করুন</h3>
+          <p style={{ fontSize: 13, color: 'var(--mu)', marginBottom: 14 }}>
+            এই Excel ফাইলে প্রতিটা ট্যাবে একটা উদাহরণ সারি দেওয়া আছে — সেভাবে আপনার তথ্য বসিয়ে দিন।
+          </p>
+          <a href="/api/import/template" className="btn btn-primary bs"><i className="ti ti-download"></i> টেমপ্লেট ডাউনলোড করুন</a>
+        </div>
+
+        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 10 }}>ধাপ ২ — পূরণ করা ফাইল আপলোড করুন</h3>
+          {err && <div className="alert alert-error">{err}</div>}
+          <input type="file" accept=".xlsx,.xls" onChange={onFileChange}
+            style={{ marginBottom: 14, fontSize: 13 }} />
+          <div>
+            <button className="btn btn-primary bs" disabled={!file || busy} onClick={runPreview}>
+              {busy ? 'পড়া হচ্ছে...' : 'প্রিভিউ দেখুন'}
+            </button>
+          </div>
+        </div>
+
+        {preview && (
+          <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>ধাপ ৩ — যাচাই করুন</h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 16 }}>
+              {[
+                ['ফ্ল্যাট', preview.counts.flats],
+                ['টেনেন্ট', preview.counts.tenants],
+                ['রেন্ট পেমেন্ট', preview.counts.rentPayments],
+                ['সার্ভিস পেমেন্ট', preview.counts.servicePayments],
+                ['অ্যাডভান্স পেমেন্ট', preview.counts.advancePayments],
+              ].map(([label, val]) => (
+                <div key={label} style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{val}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--mu)', fontWeight: 700 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {preview.errors.length > 0 && (
+              <div className="alert alert-error">
+                <b>{preview.errors.length}টা ভুল পাওয়া গেছে — আগে ঠিক করে আবার আপলোড করুন:</b>
+                <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                  {preview.errors.slice(0, 15).map((e, i) => <li key={i} style={{ fontSize: 12.5, marginBottom: 3 }}>{e}</li>)}
+                </ul>
+                {preview.errors.length > 15 && <p style={{ fontSize: 12 }}>...আরও {preview.errors.length - 15}টা ভুল আছে</p>}
+              </div>
+            )}
+
+            {preview.warnings.length > 0 && (
+              <div className="alert alert-warn">
+                <b>সতর্কতা:</b>
+                <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                  {preview.warnings.slice(0, 10).map((w, i) => <li key={i} style={{ fontSize: 12.5, marginBottom: 3 }}>{w}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {preview.errors.length === 0 && (
+              <>
+                <div className="alert alert-ok">সব ঠিক আছে! নিচে Confirm করলে ডেটা যোগ হয়ে যাবে।</div>
+                <button className="btn btn-primary" disabled={busy} onClick={runCommit}>
+                  {busy ? 'ইমপোর্ট হচ্ছে...' : `✓ Confirm করে ইমপোর্ট করুন`}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {result && (
+          <div className="card" style={{ padding: 22 }}>
+            <div className="alert alert-ok" style={{ marginBottom: 0 }}>
+              <b>✓ সফলভাবে ইমপোর্ট হয়েছে!</b>
+              <div style={{ fontSize: 13, marginTop: 8 }}>
+                {result.flatsCreated} টা ফ্ল্যাট, {result.tenantsCreated} জন টেনেন্ট, {result.rentPaymentsInserted} টা রেন্ট
+                পেমেন্ট, {result.servicePaymentsInserted} টা সার্ভিস পেমেন্ট, {result.advancePaymentsInserted} টা অ্যাডভান্স
+                পেমেন্ট যোগ হয়েছে।
+              </div>
+            </div>
+            <a href="/dashboard" className="btn btn-primary" style={{ marginTop: 16 }}>ড্যাশবোর্ডে দেখুন →</a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

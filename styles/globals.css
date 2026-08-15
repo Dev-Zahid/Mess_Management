@@ -60,6 +60,9 @@ button,input,select{font-family:inherit}
 .brand .ic{width:36px;height:36px;border-radius:10px;background:linear-gradient(160deg,#5A8CF8,var(--pr) 60%,#2E52D6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;box-shadow:0 4px 10px rgba(59,109,240,.3)}
 .nav-links{display:flex;align-items:center;gap:28px;font-size:14px;font-weight:600;color:#3B4354}
 .nav-login-mobile{display:none}
+.lang-switch{display:flex;align-items:center;background:var(--bg);border-radius:20px;padding:3px}
+.lang-switch button{border:none;background:none;padding:5px 12px;border-radius:16px;font-size:12px;font-weight:700;color:var(--mu);cursor:pointer;font-family:inherit}
+.lang-switch button.on{background:#fff;color:var(--pr);box-shadow:0 1px 3px rgba(20,30,60,.1)}
 
 .hero{padding:80px 24px 60px;text-align:center;max-width:820px;margin:0 auto}
 .hero h1{font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.15;margin-bottom:18px}
