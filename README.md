@@ -312,3 +312,43 @@ FAQ, footer — সব) সংশ্লিষ্ট ভাষায় বদল
 করা কোনো একটা **extension** (ad-blocker, password manager, বা অন্য কিছু) পেজে script ঢুকিয়ে দিচ্ছে
 আর নিজেই ক্র্যাশ করছে। আমি পুরো কোডবেসে `M_ID` লিখে সার্চ করেছি — কোথাও নেই। যাচাই করতে চাইলে
 Incognito window-এ (extension বন্ধ থাকে by default) সাইটটা খুলে দেখো, এই এরর আর আসবে না।
+
+---
+
+## এই সেশনে (v10) — Google Sheet থেকে সরাসরি ইমপোর্ট
+
+### সমস্যা যা সমাধান হলো
+Excel টেমপ্লেট ডাউনলোড করে, ভরে, আবার আপলোড করা — এই পুরো রাউন্ড-ট্রিপ ৬ মাসের অনেক ডেটার জন্য
+সময়সাপেক্ষ। এখন **সরাসরি আপনার existing Google Sheet থেকে** ইমপোর্ট করা যায় — কোনো ডাউনলোড/আপলোড
+লাগে না।
+
+### কীভাবে কাজ করে
+`/import` পেজে এখন দুটো অপশন: **"Google Sheet থেকে"** (নতুন, ডিফল্ট) আর **"Excel ফাইল আপলোড"** (আগেরটা)।
+
+Google Sheet অপশনে:
+1. আপনার শিট **"Anyone with the link" (Viewer)** হিসেবে শেয়ার করুন (File → Share)
+2. লিংকটা কপি করে পেস্ট করুন
+3. সিস্টেম নিজে থেকেই আপনার শিটের ট্যাব ও কলাম বুঝে নেওয়ার চেষ্টা করবে — **flexible header matching**:
+   - ট্যাবের নাম "Flats"/"Flat", "Tenants"/"Tenant", "Rent Payments"/"RentPayments"/"Rent" ইত্যাদি
+     variant চলবে
+   - কলামের নাম "Tenant Name" বা শুধু "Name", "Flat ID" বা "Flat Name" বা শুধু "Flat" — সবই চলবে
+   - **আসল ব্যাপার:** যদি আপনার পুরনো শিট **এই একই Mess Manager অ্যাপের আগের Google Apps Script
+     ভার্সন** থেকে হয় (যেখানে Tenant-রা Flat-কে ID দিয়ে রেফার করে, যেমন "F001"), সেটাও কাজ করবে —
+     ID-ভিত্তিক আর নাম-ভিত্তিক দুই ধরনের রেফারেন্সই সাপোর্ট করা হয়েছে।
+4. Preview-তে দেখাবে কোন ট্যাব কী নামে পাওয়া গেছে, আর কোনো ভুল থাকলে ঠিক কোন সারিতে কী সমস্যা
+5. Confirm করলেই ডেটা যোগ হয়ে যায় — কোনো ফাইল ছাড়াই
+
+### টেকনিক্যাল নোট
+- Google Sheets-এর পাবলিক CSV export endpoint ব্যবহার করা হয়েছে (`gviz/tq?tqx=out:csv`) — কোনো
+  OAuth/API key লাগে না, শুধু শিট শেয়ার করা থাকতে হবে
+- Excel ও Google Sheet — দুটো path-ই এখন একই shared validator (`lib/import-shared.js`) ব্যবহার করে,
+  তাই দুটোতেই একই রকম সঠিকভাবে carry-forward calculation ও error detection কাজ করে
+- নতুন ফাইল: `lib/import-shared.js`, `lib/google-sheets-fetch.js`, `pages/api/import/google-sheet.js`
+
+### যাচাই যা করা হয়েছে (এবং একটা বাগ পেয়ে ফিক্স করা হয়েছে)
+Alias-matching validator বাস্তব-জগতের messy ডেটা দিয়ে টেস্ট করা হয়েছে (ভিন্ন casing, ID-ভিত্তিক
+রেফারেন্স, ইচ্ছাকৃত ভুল রেফারেন্স) — সব সঠিকভাবে ধরা পড়েছে। **টেস্ট করতে গিয়ে একটা আসল বাগ পাওয়া
+গেছে ও ফিক্স করা হয়েছে:** যখন কোনো payment sheet টেনেন্টকে শুধু ID দিয়ে রেফার করত (নাম/রুম কলাম ছাড়া),
+`commitImport` ভুলভাবে তার rent/name/room ফাঁকা/০ বসিয়ে দিচ্ছিল। এখন প্রতিটা resolved tenant reference
+সরাসরি একটা authoritative `tenantDataByRealId` map থেকে সঠিক তথ্য পায় — mocked database দিয়ে
+end-to-end টেস্ট করে নিশ্চিত করা হয়েছে এটা এখন সঠিকভাবে কাজ করছে।
