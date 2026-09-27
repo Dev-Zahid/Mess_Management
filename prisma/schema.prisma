@@ -10,8 +10,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooled (port 6543, pgbouncer=true) — used by the running app
-  directUrl = env("DIRECT_URL")     // direct (port 5432) — used only by `prisma db push`/migrate
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ── Organization = one mess-owner's business (the SaaS "tenant") ──

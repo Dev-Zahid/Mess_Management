@@ -4,9 +4,16 @@ import { requireOrgUser } from '../lib/guard';
 export async function getServerSideProps({ req }) {
   const result = await requireOrgUser(req);
   if (result.redirect) return result;
-  const { status } = result;
+  const { status, user } = result;
   if (status === 'expired' || status === 'suspended') {
     return { redirect: { destination: '/billing?locked=1', permanent: false } };
+  }
+  // Bulk import can create/overwrite Flats, Tenants and every payment type
+  // at once — this is an Admin/Owner-only action, same as the rest of the
+  // "flats" management surface, not something any Management teammate
+  // should be able to trigger regardless of their per-resource permissions.
+  if (user.role !== 'Owner' && user.role !== 'Admin') {
+    return { redirect: { destination: '/dashboard', permanent: false } };
   }
   return { props: {} };
 }

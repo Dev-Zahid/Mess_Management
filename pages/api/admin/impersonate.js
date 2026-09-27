@@ -3,9 +3,10 @@ import { requireSuperAdmin } from '../../../lib/guard';
 import { createSession } from '../../../lib/auth';
 import { logAdminAction } from '../../../lib/audit';
 
+import { withJsonErrors } from '../../../lib/api-wrapper';
 // Starts a session AS the org's Owner, so the Super Admin lands in that
 // customer's real dashboard to debug/support them — every use is logged.
-export default async function handler(req, res) {
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const result = await requireSuperAdmin(req);
   if (result.redirect) return res.status(401).json({ error: 'Unauthorized' });
@@ -29,4 +30,4 @@ export default async function handler(req, res) {
   // accidentally left active.
   createSession(res, owner);
   return res.status(200).json({ ok: true });
-}
+});

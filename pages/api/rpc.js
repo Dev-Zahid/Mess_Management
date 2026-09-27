@@ -1,8 +1,9 @@
 import { getSession, effectiveOrgStatus } from '../../lib/auth';
 import { prisma } from '../../lib/db';
 import { handlers } from '../../lib/rpc-handlers';
+import { withJsonErrors } from '../../lib/api-wrapper';
 
-export default async function handler(req, res) {
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const session = getSession(req);
@@ -30,4 +31,4 @@ export default async function handler(req, res) {
     console.error(`RPC error in ${fn}:`, e);
     return res.status(500).json({ error: e.message || 'Server error' });
   }
-}
+});

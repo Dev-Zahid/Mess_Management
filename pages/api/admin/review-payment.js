@@ -3,7 +3,8 @@ import { getSession } from '../../../lib/auth';
 import { PLANS } from '../../../lib/plans';
 import { logAdminAction } from '../../../lib/audit';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'লগইন করুন' });
@@ -52,4 +53,4 @@ export default async function handler(req, res) {
   await logAdminAction(user, 'approve_payment', payment.org, `${payment.method} ৳${payment.amount} trx:${payment.trxId} -> ${subscriptionEndsAt.toISOString().slice(0,10)}`);
 
   return res.status(200).json({ ok: true, orgName: payment.org.name, subscriptionEndsAt: subscriptionEndsAt.toISOString() });
-}
+});

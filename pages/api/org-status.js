@@ -1,7 +1,8 @@
 import { getSession, effectiveOrgStatus } from '../../lib/auth';
 import { prisma } from '../../lib/db';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   const session = getSession(req);
   if (!session || !session.orgId) return res.status(401).json({ error: 'লগইন করুন' });
 
@@ -29,4 +30,4 @@ export default async function handler(req, res) {
     plan: org.plan,
     announcement: announcement ? announcement.message : null,
   });
-}
+});

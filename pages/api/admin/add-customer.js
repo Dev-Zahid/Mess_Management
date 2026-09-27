@@ -4,7 +4,8 @@ import { hashPin } from '../../../lib/auth';
 import { logAdminAction } from '../../../lib/audit';
 import { TRIAL_DAYS } from '../../../lib/plans';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const result = await requireSuperAdmin(req);
   if (result.redirect) return res.status(401).json({ error: 'Unauthorized' });
@@ -32,4 +33,4 @@ export default async function handler(req, res) {
 
   await logAdminAction(admin, 'manual_add_customer', org, `${ownerName} / ${phone}`);
   return res.status(200).json({ success: true, orgId: org.id });
-}
+});

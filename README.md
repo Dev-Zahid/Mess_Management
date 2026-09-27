@@ -1,354 +1,243 @@
-# Mess Manager — SaaS (single sign-on, Super Admin control center)
+# Mess Manager SaaS
 
-## এই ধাপে যা করা হয়েছে
+Bangladesh-style "mess" (shared boarding house) management system — multi-tenant SaaS
+built with **Next.js (Pages Router)**, **Prisma**, and **PostgreSQL (Supabase)**, deployed
+on **Vercel**. Each signup becomes its own `Organization` (tenant); every table is scoped
+by `orgId` so many mess-owners safely share one database.
 
-### ১. পুরনো ৫ পয়েন্ট
-- **Double PIN সম্পূর্ণ সরানো** — এখন phone+PIN দিয়ে `/login`-এ একবার লগইন করলেই হয়। Owner, Management,
-  SuperAdmin — সবাই একই `User` টেবিলের row, সবাই একইভাবে লগইন করে। `app-shell.html`-এর ভেতরের পুরনো
-  PIN-screen, `startAuth()`, `attemptLogin()`, `doLogin()` সব সরিয়ে `bootstrapApp()` দিয়ে replace করা
-  হয়েছে — এটা সরাসরি সেশন কুকি দিয়ে `getAllData()` কল করে, কোনো PIN টাইপ করা লাগে না।
-- **Team/PINs — phone-based access** — Owner এখন নতুন Management member যোগ করলে নাম+ফোন+PIN দেয়, আর
-  সেই member নিজের ফোন+PIN দিয়ে সরাসরি `/login`-এ গিয়ে ঢুকতে পারে, শেয়ার্ড ডিভাইসে PIN বসানোর দরকার নেই।
-- **Trial/Billing banner** — `app-shell.html`-এর উপরে এখন trial countdown বা renewal reminder ব্যানার
-  দেখায় (`public/billing-banner.js`, `/api/org-status`)।
-- **Due Tracker-এ "All" মাস অপশন** যোগ হয়েছে (বাকিগুলোতে আগে থেকেই ছিল)।
-- **Owner Panel এখন chronological (Jan→Dec)** sort করে, আগে ছিল reverse-date।
+The dashboard UI itself (`public/app-shell.html`) is a large, mostly self-contained HTML/JS
+app that talks to the backend through a single RPC endpoint (`/api/rpc`) — see
+[How the frontend talks to the backend](#how-the-frontend-talks-to-the-backend) below.
 
-### ২. Super Admin — Tier 1, 2, 3 সব একসাথে
-- **Tier 1:** কাস্টমার সার্চ/ফিল্টার, subscription extend/suspend/reactivate/plan-change, admin notes,
-  MRR/revenue analytics (এই মাস vs গত মাস vs all-time), trial-ending-soon list, প্রতি কাস্টমারের পেমেন্ট
-  হিস্ট্রি, CSV export (customers + payments)
-- **Tier 2:** "View as Customer" impersonation (audit-logged), পূর্ণ audit log viewer, admin notes
-- **Tier 3:** Coupon system, ম্যানুয়ালি নতুন কাস্টমার add করা, সব কাস্টমারের অ্যাপে announcement banner
+---
 
-নতুন পেজ: `/admin` (redesigned dashboard), `/admin/customers/[id]`, `/admin/coupons`,
-`/admin/announcements`, `/admin/audit-log`, `/admin/add-customer`
+## Tech stack
 
-## ⚠️ গুরুত্বপূর্ণ মাইগ্রেশন নোট — Phase 1 আগে deploy করা থাকলে পড়ুন
+| Layer     | Choice                                   |
+|-----------|-------------------------------------------|
+| Framework | Next.js 14 (Pages Router)                 |
+| Database  | PostgreSQL via Supabase                   |
+| ORM       | Prisma 5                                  |
+| Auth      | Custom — phone + PIN, JWT session cookie  |
+| Hosting   | Vercel                                    |
+| File I/O  | `xlsx` / `papaparse` (bulk import)        |
 
-আগের `TeamMember` মডেল (PIN-only) এখন deprecated — লগইন/permission সব `User` মডেলে merge হয়েছে (এখন
-`User`-এ `flats`+`perms` ফিল্ড আছে)। যদি আগে কোনো org-এ Team/PINs দিয়ে কোনো Management member যোগ করা
-হয়ে থাকে (পুরনো PIN-only সিস্টেমে), সেগুলো নতুন সিস্টেমে **carry over হবে না** — কারণ পুরনো সিস্টেমে
-phone number-ই ছিল না, নতুন লগইনের জন্য phone আবশ্যক। `npm run db:push` চালানোর পর, যদি প্রয়োজন হয়,
-Owner-কে বলবেন Team/PINs পেজ থেকে সেই member-দের আবার phone number দিয়ে নতুন করে add করে নিতে।
+No other backend services are required — no Redis, no queue, no external auth provider.
 
-## ডেপ্লয় করার ধাপ
+---
+
+## Features
+
+- **Multi-tenant**: signup creates an `Organization` with a 7-day trial; every table carries `orgId`.
+- **Roles**: `SuperAdmin` (platform operator), `Owner`/`Admin` (full access to their org),
+  `Management` (per-resource, per-flat permissions set by the Owner).
+- **Core modules**: Flats, Tenants, Rent/Service/Advance payments, Service Expenses,
+  Owner Panel (owner payouts + advances), Investments.
+- **Bulk import**: Excel template or a public Google Sheet link → preview → commit
+  (Admin/Owner only).
+- **Billing**: manual bKash/Nagad payment submission → Super Admin review → subscription
+  extended automatically.
+- **Super Admin console** (`/admin`): customer search/filter, extend/suspend/reactivate,
+  plan changes, admin notes, revenue analytics, "View as Customer" impersonation (audit
+  logged), coupon codes, platform-wide announcements, full audit log, CSV export.
+
+---
+
+## Getting started (fresh Supabase + Vercel project)
+
+You do **not** need to change any code to point this at a brand-new Supabase/Vercel
+project — every credential is read from environment variables (`.env` locally,
+Project Settings → Environment Variables on Vercel). Nothing in the codebase is hardcoded
+to a specific project.
+
+### 1. Create a fresh Supabase project
+
+1. [supabase.com](https://supabase.com) → **New project**. Pick a region close to your
+   users (e.g. Singapore for Bangladesh).
+2. Once it's provisioned: **Project Settings → Database → Connection string**.
+3. You need **two** different connection strings:
+   - **`DATABASE_URL`** — the **Transaction pooler** string (port `6543`). Must end in
+     `?pgbouncer=true`. This is what the running app uses for every query.
+   - **`DIRECT_URL`** — the **Session**/direct string (port `5432`, no pgbouncer). Only
+     `prisma db push` / `prisma migrate` use this, because schema changes (DDL) don't work
+     reliably through the pooler.
+   > ⚠️ Mixing these up is the single most common setup mistake with this project — see
+   > [Troubleshooting](#troubleshooting) below.
+
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
+```
+
+Fill in:
+
+```env
+DATABASE_URL="postgresql://postgres.[project-ref]:[PASSWORD]@[HOST]:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
+JWT_SECRET="<a long random string — generate with: openssl rand -hex 32>"
+SUPERADMIN_PHONE="01700000000"
+SUPERADMIN_PIN="123456"
+```
+
+### 3. Install, push schema, seed the Super Admin
+
+```bash
 npm install
-npm run db:push      # নতুন schema push করবে (User-এ flats/perms, AuditLog, Coupon, Announcement যোগ হবে)
-npm run db:seed        # Super Admin লগইন (যদি আগে না করা থাকে)
-npm run dev              # http://localhost:3000
+npm run db:push     # creates every table in the new Supabase database
+npm run db:seed     # creates your Super Admin login (phone + PIN above)
+npm run dev          # http://localhost:3000
 ```
 
-**index.html/stylesheet.html বদলালে:** `source/index.html` বা `source/stylesheet.html` এডিট করে
-`node scripts/build-app-shell.js` চালান — এটা `public/app-shell.html` রিজেনারেট করবে।
+Log in at `/login` with `SUPERADMIN_PHONE` / `SUPERADMIN_PIN` — you'll land on `/admin`.
+**Change that PIN** (or the seeded phone number) before going live; anyone who guesses the
+default has full platform access.
 
-## যা এখনো বাকি (সৎভাবে জানানো)
+### 4. Set your real payment numbers
 
-- **Fully mobile responsive অডিট** — এই সেশনে গভীরভাবে করা হয়নি (সময়ের অভাবে বাকি সব বড় কাজের পর সবচেয়ে
-  শেষে রাখা হয়েছিল, স্কোপ শেষ করতে পারিনি)। বেসিক media query (768px/420px) আগে থেকেই আছে, কিন্তু Owner
-  Panel-এর ৮-কলাম টেবিল, room/seat builder grid ইত্যাদি নতুন করে audit করা দরকার।
-- Coupon system-টা তৈরি করা হয়েছে (backend+admin UI) কিন্তু signup/billing ফ্লোতে এখনো "coupon code
-  apply করুন" ইনপুট যোগ করা হয়নি — কাস্টমার এখনো নিজে coupon ব্যবহার করতে পারবে না, শুধু Super Admin
-  create/activate/deactivate করতে পারবে।
+Edit `lib/plans.js` — replace the placeholder `PAYMENT_NUMBERS` (bKash/Nagad) with your
+actual "Send Money" numbers, and adjust `PLANS` (pricing, trial length) as needed.
 
-⚠️ যথারীতি sandbox network restriction থাকায় real database দিয়ে live টেস্ট করা যায়নি — শুধু syntax
-validation, import resolution, আর RPC-call ⇄ handler cross-check করা হয়েছে (সব পাস করেছে)। Deploy করার
-পর bug পেলে জানাবেন।
+### 5. Deploy to Vercel
 
----
+1. [vercel.com](https://vercel.com) → **Add New… → Project** → import this repository.
+2. In **Project Settings → Environment Variables**, add the same five variables from your
+   `.env` (`DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `SUPERADMIN_PHONE`, `SUPERADMIN_PIN`).
+3. Deploy. `postinstall` runs `prisma generate` automatically during the Vercel build.
+4. Run `npm run db:seed` **once** against the production database (from your machine, with
+   production `DATABASE_URL`/`DIRECT_URL` in your local `.env` temporarily) to create the
+   production Super Admin.
 
-## এই সেশনে (v5) যা ফিক্স করা হয়েছে
+### Retiring an old Supabase/Vercel project
 
-### বাগ ফিক্স
-1. **Phone নম্বর trim না করার বাগ** — Signup, Login, Super Admin-এর "Manual Add Customer" তিনটাতেই phone
-   validate হতো trim করে কিন্তু save হতো untrim অবস্থায় — স্পেস দিয়ে টাইপ করলে পরে লগইন ব্যর্থ হতো। ফিক্স।
-2. **Signup-এ phone format validation ছিল না** — এখন সব জায়গায় সমানভাবে `01XXXXXXXXX` চেক হয়।
-3. **Subscription expire হলে অ্যাপ আটকে যেত** — RPC 401/402 পেলে shim এখন সঠিক পেজে (`/login`/`/billing`)
-   redirect করে, আগে শুধু loading screen-এ আটকে থাকত।
-4. **Super Admin "Reactivate" বাটনে লজিক গ্যাপ** — এখন trial ও subscription দুটোই চেক করে সঠিক status বসায়।
-5. **🔴 সবচেয়ে গুরুত্বপূর্ণ: Due Tracker-এর নিজের "All" অপশনই ভাঙা ছিল** — `isTenantActiveInMonth()`-এ
-   `MONTHS.indexOf('')===-1` এর কারণে "All" সিলেক্ট করলে Rent Due ট্যাব সম্পূর্ণ খালি দেখাত। এখন "All"
-   সিলেক্ট করলে entry date থেকে বর্তমান মাস পর্যন্ত প্রতি মাসের due যোগ করে cumulative total দেখায়।
+If you're moving off a previous Supabase/Vercel project onto new ones:
 
-### Billing বাটন মেনুতে সরানো
-- Top-page banner সরিয়ে sidebar-এর "Account" সেকশনে "Billing" মেনু আইটেম যোগ করা হয়েছে, trial/renewal
-  countdown ছোট badge আকারে (`public/billing-banner.js` rewrite)।
-- Announcement banner এখনো top-এ থাকে (এটা broadcast notice, তাই page-top-ই ঠিক জায়গা)।
-
-### Mobile responsive
-- মূল app (`app-shell.html`) আগে থেকেই ভালো কভারেজ ছিল — বড় সমস্যা পাওয়া যায়নি।
-- Super Admin পেজগুলোতে (`/admin/*`) কোনো mobile CSS ছিলই না — এখন সব wide table horizontal-scroll পায়,
-  multi-column grid mobile-এ 1-column হয়ে যায়, filter/toolbar row wrap করে।
-
-### যাচাই
-- ৪২টা ফাইল syntax-check (০ error), সব import resolve করে, app-shell.html-এর প্রতিটা RPC কল handler-এর
-  সাথে ক্রসচেক করা (dynamic `[fn](...)` কলসহ) — সব মিলেছে। Prisma schema brace-balanced।
-
-⚠️ যথারীতি sandbox network restriction থাকায় real database দিয়ে live end-to-end টেস্ট করা যায়নি।
+1. Finish steps 1–5 above first and confirm the **new** deployment fully works (you can log
+   in, create a test org, see data in the new Supabase table editor).
+2. Update any DNS/custom domain to point at the new Vercel project.
+3. Only then delete the old ones — **Vercel**: old Project → Settings → scroll to the
+   bottom → *Delete Project*. **Supabase**: old project → Settings → General → scroll to the
+   bottom → *Delete Project*. Both are permanent and cannot be undone, and Supabase deletes
+   the underlying Postgres database (and all its data) immediately.
+4. I can't do this deletion step myself — it requires your Supabase/Vercel dashboard login,
+   which I don't have access to.
 
 ---
 
-## এই সেশনে (v6) যা ফিক্স/যোগ করা হয়েছে
+## Available scripts
 
-### বাগ ফিক্স
-1. **🔴 Advance Money (tenant deposit) Owner Panel-এ calculate হতো না** — `renderOwners()` কোনোদিন
-   `DB.advPays` (tenant-দের থেকে collected security deposit) reference-ই করত না। এখন Service Charge-এর
-   প্যাটার্নে একটা নতুন "Advance Money (Tenant Deposits)" সেকশন যোগ করা হয়েছে — Total Collected / Refunded
-   / Held (Liability) তিনটা কার্ড। এটা ইচ্ছাকৃতভাবে Net Balance-এ যোগ করা হয়নি, কারণ security deposit
-   profit না — এটা tenant-কে ফেরত দেওয়ার দায় (liability), তাই আলাদাভাবে স্পষ্ট করে দেখানো হয়েছে।
-2. **🔴 Announcement banner-এর position ভাঙা ছিল** — `body{display:flex}` (sidebar+content পাশাপাশি)
-   হওয়ায় banner-টা `document.body`-র প্রথম child হিসেবে বসালে সেটা সাইডবারের পাশে একটা সরু flex-column
-   হয়ে যেত, পুরো width-এর banner হতো না — তাই mess owner এটা দেখতেই পেত না। এখন সঠিক জায়গায় (topbar-এর
-   নিচে, `.main`-এর ভেতরে একটা dedicated slot-এ) বসানো হয়।
-3. **Admin panel/landing/auth পেজে emoji আইকন ব্যবহারের ঝুঁকি** — এই পেজগুলোতে Tabler icon font কখনো
-   লোডই হতো না, আর emoji রেন্ডারিং OS/browser-নির্ভর (কিছু সিস্টেমে emoji ফন্ট না থাকলে broken/tofu box
-   দেখায়) — এটাই সম্ভবত Announcements পেজে দেখা "image error"। এখন `pages/_document.js` যোগ করে Tabler
-   icon font গ্লোবালি লোড করা হয়েছে, আর সব emoji-কে (🎟️📢📜⬇👁🚧✓✕🏠💰📊👥🧾📱) `<i class="ti ti-...">`
-   দিয়ে replace করা হয়েছে — main app-এর সাথে visual consistency-ও বেড়েছে।
+| Command              | What it does                                             |
+|-----------------------|-----------------------------------------------------------|
+| `npm run dev`         | Local dev server                                          |
+| `npm run build`       | Production build                                          |
+| `npm run start`       | Run a production build locally                            |
+| `npm run db:push`     | Push `prisma/schema.prisma` to the database (no migration files) |
+| `npm run db:studio`   | Open Prisma Studio (browse/edit data)                     |
+| `npm run db:seed`     | Create the Super Admin user                                |
+| `node scripts/build-app-shell.js` | Regenerate `public/app-shell.html` after editing `source/index.html` or `source/stylesheet.html` |
 
-### Mobile responsive — সম্পন্ন
-- Super Admin পেজগুলোতে wide table horizontal-scroll wrapper, multi-column grid mobile-এ collapse,
-  filter/toolbar row wrap — সব যোগ হয়েছে।
+---
 
-### ⚠️ Team/PINs — "Management add করলে login করতে পারছে না" নিয়ে
+## How the frontend talks to the backend
 
-আমি পুরো flow (Add User → Database → Login) কোড ধরে ধরে খুঁটিয়ে দেখেছি — বর্তমান কোডে যুক্তিগতভাবে কোনো
-bug খুঁজে পাইনি। **সবচেয়ে সম্ভাব্য কারণ:** এই আপডেটে `User` টেবিলে নতুন দুটো column (`flats`, `perms`)
-যোগ হয়েছে (আগে এগুলো আলাদা `TeamMember` টেবিলে ছিল)। যদি deploy করার পর
+`public/app-shell.html` is a large single-page app (originally written for Google Apps
+Script) that calls functions like:
 
-```bash
-npm run db:push
+```js
+google.script.run.withSuccessHandler(cb).addTenant(data);
 ```
 
-**আবার না চালানো হয়ে থাকে**, তাহলে database-এ এই নতুন column গুলো নেই, আর Management add করার চেষ্টা করলে
-database-লেভেলে error হবে (ফলে ওই ব্যক্তির account-ই তৈরি হয়নি, তাই login করতে পারবে না)।
+`public/gs-shim.js` reproduces that exact API in the browser and forwards every call to
+`POST /api/rpc` as `{ fn: "addTenant", args: [data] }`, which dispatches to the matching
+handler in `lib/rpc-handlers.js`. This means:
 
-**এখনই এটা ট্রাই করুন:**
-```bash
-npm run db:push
-```
-এরপর আবার Team/PINs থেকে নতুন করে একজন add করে দেখুন।
-
-**যদি এরপরও কাজ না করে**, দয়া করে আমাকে এই তথ্যগুলো দিন যাতে সঠিক জায়গা ধরতে পারি:
-- Management **add** করার সময় কি কোনো error toast দেখায়, নাকি "successfully added" মেসেজ আসে?
-- **Login** করার সময় ঠিক কী হয় — "ভুল নম্বর বা PIN" এরর দেখায়, নাকি অন্য কোনো পেজে আটকে যায়, নাকি কিছুই হয় না?
-- Management যে ফোন নম্বর দিয়ে login করছে, সেটা কি ঠিক ঐ একই নম্বর যেটা owner Add করার সময় টাইপ করেছিল (স্পেস/ড্যাশ ছাড়া, ঠিক ১১ ডিজিট)?
-
-**Team/PINs এখন যেভাবে কাজ করে (স্পষ্ট করে বলছি):**
-1. Owner "Team/PINs" পেজে গিয়ে "+ Add User" চাপে
-2. নাম, ফোন নম্বর (Management-এর নিজের, owner-এর না), ৪-৬ ডিজিট PIN, role (Admin/Management), আর role
-   Management হলে কোন কোন Flat-এ অ্যাক্সেস থাকবে — এগুলো দিয়ে Save করে
-3. Management ব্যক্তি এখন নিজের ফোনে/কম্পিউটারে গিয়ে সরাসরি ওয়েবসাইটের `/login` পেজে যায়
-4. নিজের ফোন নম্বর + Owner-এর দেওয়া PIN দিয়ে লগইন করে — এটা ঠিক Owner যেভাবে লগইন করে, একই পদ্ধতি
-5. লগইন করলে তারা নিজের permission (কোন flat, কোন feature দেখতে/এডিট করতে পারবে) অনুযায়ী সীমিত অ্যাক্সেস পায়
-
-আগে (পুরনো Google Sheets ভার্সনে) এটা shared-device PIN স্ক্রিন ছিল — এখন সেটা সম্পূর্ণ সরিয়ে প্রত্যেকের
-নিজস্ব ফোন+PIN লগইন করা হয়েছে, ঠিক আপনি যেমন request করেছিলেন।
+- **All access control lives server-side**, in `lib/rpc-handlers.js` and `lib/guard.js` —
+  the HTML/JS frontend only *hides* buttons a user shouldn't see; it must never be trusted
+  to enforce permissions on its own, since any request to `/api/rpc` can be made directly.
+- If you change `source/index.html` or `source/stylesheet.html`, run
+  `node scripts/build-app-shell.js` to regenerate `public/app-shell.html`.
 
 ---
 
-## GitHub-এ কোড push করার নিয়ম
+## Project structure
 
-প্রথমবার:
-```bash
-cd mess-manager-saas   # প্রজেক্ট ফোল্ডারে ঢুকুন
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
+```
+prisma/schema.prisma       Database schema (Organization, User, Flat, Tenant, payments...)
+lib/
+  auth.js                  Session cookie (JWT), PIN hashing, org status
+  guard.js                 Page-level auth guards (requireOrgUser, requireSuperAdmin)
+  rpc-handlers.js           All business logic behind /api/rpc, scoped by orgId
+  import-processor.js       Excel import → DB
+  import-shared.js          Shared validation for Excel + Google Sheet import
+  google-sheets-fetch.js    Pulls a public Google Sheet as CSV
+  perms.js                 Per-resource view/edit/delete permission model
+  plans.js                 Pricing, trial length, payment numbers
+pages/
+  api/                     API routes (auth, billing, import, admin, rpc)
+  admin/                   Super Admin console pages
+  dashboard/, billing.js, import.js, login.js, signup.js
+public/app-shell.html       The actual dashboard UI (generated — see below)
+source/                     Source-of-truth for app-shell.html (edit here, then rebuild)
 ```
 
-এরপর যেকোনো নতুন পরিবর্তনের পর:
-```bash
-git add .
-git commit -m "changes description লিখুন এখানে"
-git push
-```
+---
 
-**⚠️ গুরুত্বপূর্ণ:** `.env` ফাইল **কখনো push করবেন না** — এতে আপনার database password ও secret key থাকে।
-`.gitignore` ফাইলে এটা আগে থেকেই বাদ দেওয়া আছে, তাই সাধারণত এটা এমনিতেই push হবে না, কিন্তু নিশ্চিত হতে
-`git status` চালিয়ে দেখে নিন `.env` লিস্টে না থাকে।
+## Security model (read this before adding a new RPC function)
 
-GitHub-এ push করার পর Vercel-এ প্রজেক্ট কানেক্ট করা থাকলে **অটোমেটিক্যালি নতুন ভার্সন deploy হয়ে যাবে** —
-আলাদা করে কিছু করা লাগবে না।
+- Every mutation in `lib/rpc-handlers.js` calls `authCheck(session, { resource, action, flatId })`
+  — never trust `session` fields the client could influence; `session` comes only from the
+  verified JWT cookie (`lib/auth.js`).
+- Every **read** handler exposed through the `handlers` dispatch table must be wrapped with
+  `scopedReader()` (see `lib/rpc-handlers.js`) so it's filtered to the caller's assigned
+  flats and, where relevant, their `view` permission — because `/api/rpc` will run *any*
+  function in that table for *any* logged-in user of the org, regardless of what the UI
+  currently shows them. Adding a new `getX` handler without `scopedReader()` re-opens the
+  exact data-leak class of bug that was fixed in this codebase (see below).
+- Admin-only actions (bulk import, user management, flat management) must check
+  `role === 'Owner' || role === 'Admin'` **on the server**, not just hide the button in the UI.
+
+## Known fixes already applied in this codebase
+
+A recent audit of this codebase found and fixed:
+
+1. Read RPCs (`getTenants`, `getOwnerPayments`, `getInvestments`, etc.) were not scoped to
+   the caller's flats/permissions when called directly — only the bulk `getAllData` call
+   was. Fixed via `scopedReader()`.
+2. Bulk import (`/import`, `/api/import/process`, `/api/import/google-sheet`) had no
+   Admin-only check — any Management teammate could mass-overwrite org data. Now
+   Owner/Admin-only.
+3. Imported Service/Advance payments weren't tagged with `flatId`, unlike Rent payments —
+   fixed, so flat-scoped visibility works consistently across all payment types.
+4. `/api/billing/submit-payment` trusted a client-supplied `amount` instead of deriving it
+   from the plan — fixed to always use the server-side price.
+5. Signup PIN validation was weaker (any 4+ characters) than everywhere else in the app
+   (`4–6 digits`) — made consistent.
+
+## Known limitations (not fixed — worth knowing about)
+
+- **ID generation** (`genId()` in `lib/gen-id.js`) computes the next sequential ID
+  (`T001`, `R002`, ...) by scanning existing rows rather than using a DB sequence/transaction.
+  Two simultaneous writes for the same org could race and collide. Low risk for a single
+  mess-owner's normal usage pattern, but worth knowing if you scale up write concurrency.
+- Coupon codes exist in the schema and Super Admin UI, but there's no "apply coupon code"
+  input in the signup/billing flow yet — only Super Admin can create/toggle them.
+- No automated test suite. Changes to `lib/rpc-handlers.js` should be manually re-verified
+  against the security model above.
 
 ---
 
-## এই সেশনে (v7) যা ফিক্স/আপডেট হলো
+## Troubleshooting
 
-### বাগ ফিক্স
-1. **🔴 Owner Panel-এ Advance Money section ছিলই না** — `renderOwners()` কখনো tenant-দের থেকে collected
-   security deposit (`DB.advPays`) touch করত না। এখন Service Charge-এর প্যাটার্নে একটা নতুন
-   "Advance Money (Tenant Deposits)" সেকশন আছে — Collected / Refunded / Held তিন কার্ড। এটা ইচ্ছাকৃতভাবে
-   Net Balance-এ যোগ হয়নি কারণ এটা profit না, tenant-কে ফেরত দেওয়ার দায় (liability)।
-2. **🔴 Super Admin-এর কোনো Logout ছিল না** — `/admin/*` পেজগুলোতে কোনো navigation chrome-ই ছিল না।
-   এখন প্রতিটা admin পেজে একটা শেয়ার্ড header (`components/AdminHeader.js`) আছে যেখানে Logout বাটন থাকে।
-3. **🔴 মোবাইলে ল্যান্ডিং পেজে Login option ছিল না** — `.nav-links{display:none}` মোবাইলে পুরো nav (ফিচার,
-   প্রাইসিং, **লগইন** সহ) লুকিয়ে ফেলত, শুধু Signup বাটন visible থাকত। এখন Login বাটন আলাদাভাবে সবসময়
-   দেখায়।
-4. **🔴 মোবাইলে sidebar মেনু বাটনে ক্লিক করলে মেনু খুলত না** — root cause: `--nw` variable দুই জায়গায়
-   ব্যবহার হতো (sidebar-এর width + main content-এর margin), মোবাইলে `--nw:0px` সেট করায় sidebar-এর
-   width-ও 0 হয়ে যেত — ফলে `.open` class toggle হলেও sidebar-এর কোনো width না থাকায় কিছুই দেখা যেত না।
-   এখন `--nw` শুধু margin-এর জন্য ব্যবহার হয় (আলাদা `.main{margin-left:0}` rule দিয়ে), sidebar তার আসল
-   242px width রাখে যাতে drawer হিসেবে ঠিকভাবে slide করে।
+**`FATAL: (EMAXCONNSESSION) max clients reached in session mode`**
+You're using the Session-mode connection string (port `5432`) for `DATABASE_URL`. Switch
+`DATABASE_URL` to the **Transaction pooler** string (port `6543`, `?pgbouncer=true`) — Vercel
+runs many serverless function instances at once, each holding its own connection, and
+Session mode caps concurrent connections much lower than the pooler does.
 
-### Bug না, standard behavior — ব্যাখ্যা
-**"একই ব্রাউজারে ২টা ট্যাবে ২টা আলাদা account ব্যবহার করা যায় না, শেষ যেটায় লগইন করা হয় দুটোতেই সেটাই
-দেখায়"** — এটা bug না, এটা **সব ওয়েবসাইটের standard আচরণ** (Facebook, Gmail, ব্যাংকিং সাইট — সবই একই
-রকম কাজ করে)। কারণ: লগইন সেশন একটা কুকি (cookie) হিসেবে সংরক্ষিত হয়, আর কুকি ট্যাব-ভিত্তিক না —
-**পুরো ব্রাউজারের জন্য একটাই**, একই ডোমেইনের সব ট্যাব সেই একই কুকি শেয়ার করে। তাই একই ব্রাউজারে একসাথে
-২টা আলাদা account দিয়ে টেস্ট করতে চাইলে:
-- একটা normal ট্যাবে একটা account, আরেকটা **Incognito/Private window**-এ অন্য account, অথবা
-- দুইটা আলাদা ব্রাউজার ব্যবহার করুন (যেমন Chrome + Firefox), অথবা
-- Chrome-এর "Profiles" ফিচার ব্যবহার করুন
+**`prisma db push` fails or hangs**
+Make sure `DIRECT_URL` is the plain/direct connection (port `5432`), not the pooled one —
+DDL statements don't work reliably through pgbouncer.
 
-### Trial মেয়াদ নিয়ে
-Default trial `lib/plans.js`-এ `TRIAL_DAYS = 7` (৭ দিন) সেট করা আছে। এটা প্রতিটা **নতুন** সাইনআপের জন্য
-প্রযোজ্য — কেউ যদি এই ভ্যারিয়েবল বদলানোর **আগে** সাইনআপ করে থাকে, তার `trialEndsAt` তারিখ তখনই ফিক্স
-হয়ে গেছে, পরে constant বদলালে সেই পুরনো অ্যাকাউন্টে retroactively প্রভাব পড়বে না। যদি ২ দিন পর trial
-expire হওয়া দরকার ছিল testing-এর জন্য, `lib/plans.js`-এ `TRIAL_DAYS = 2` করে দিন — এটা নতুন সাইনআপে কাজ
-করবে। ইতিমধ্যে তৈরি হওয়া test account-এর জন্য Super Admin প্যানেল থেকে `/admin/customers/[id]` পেজে
-গিয়ে "Suspend" করে দিলে সাথে সাথে লক করে ফেলতে পারবেন (টেস্ট করার জন্য)।
-
-### Announcements-এ "ছবির এরর" ও position সমস্যা
-- **Position:** `body{display:flex}` (sidebar+content পাশাপাশি) হওয়ায় banner ভুল জায়গায় (sidebar-এর
-  পাশে একটা সরু কলাম হিসেবে) বসত। এখন সঠিক জায়গায় (topbar-এর নিচে, পুরো width জুড়ে) বসে।
-- **"ছবির এরর":** root cause পাওয়া গেছে — Admin/landing/auth পেজে Tabler icon font কখনো লোডই হতো না,
-  আর emoji (🎟️📢📜 ইত্যাদি) ব্যবহার হতো যেগুলো কিছু OS/browser-এ ফন্ট না থাকলে broken/tofu box হিসেবে
-  দেখায়। এখন `pages/_document.js` দিয়ে icon font গ্লোবালি লোড হয়, সব emoji `<i class="ti ti-...">` icon
-  দিয়ে replace করা হয়েছে।
-
-### ল্যান্ডিং পেজ সম্পূর্ণ আপগ্রেড
-2026 SaaS landing page best practices রিসার্চ করে (hero-এ actual product preview, pain-point section,
-"কীভাবে কাজ করে" ৩-ধাপ, বিস্তৃত ফিচার গ্রিড, security/trust ব্যান্ড, FAQ accordion, শক্তিশালী footer)
-পুরো ল্যান্ডিং পেজ নতুন করে বানানো হয়েছে। **সততার সাথে জানাচ্ছি:** ভুয়া টেস্টিমোনিয়াল বা কাস্টমার
-সংখ্যা যোগ করা হয়নি (এখনো কোনো real customer নেই) — এর বদলে honest trust signal (ফ্রি ট্রায়াল, ডেটা
-প্রাইভেসি, স্বচ্ছ প্রাইসিং) ব্যবহার করা হয়েছে।
-
----
-
-## এই সেশনে (v8) যা যোগ হলো
-
-### ১. পুরনো ডেটা ইমপোর্ট — Excel দিয়ে ৬ মাসের হিসাব একসাথে যোগ করুন
-
-নতুন মেস owner সাইনআপ করার পর সরাসরি `/import` পেজে গিয়ে:
-1. একটা টেমপ্লেট Excel ফাইল ডাউনলোড করবে (৫টা ট্যাব: Flats, Tenants, Rent Payments, Service Payments,
-   Advance Payments — প্রতিটাতে একটা উদাহরণ সারি দেওয়া আছে)
-2. নিজের পুরনো ফ্ল্যাট/টেনেন্ট/গত কয়েক মাসের ভাড়ার হিসাব সেভাবে পূরণ করে আপলোড করবে
-3. সিস্টেম প্রথমে একটা **Preview** দেখাবে (কতগুলো রেকর্ড পাওয়া গেছে, কোনো ভুল আছে কিনা — যেমন ভুল Flat
-   নাম রেফারেন্স, ভুল Month বানান, নেগেটিভ Amount ইত্যাদি)
-4. ভুল থাকলে ঠিক করে আবার আপলোড করবে, সব ঠিক থাকলে **Confirm** করলেই ডেটা যোগ হয়ে যাবে
-
-**Carry-forward হিসাব সঠিকভাবে কাজ করে:** Rent Payment ইমপোর্ট করার সময় প্রতিটা tenant-এর পেমেন্ট
-মাস-অনুযায়ী ক্রমানুসারে (chronological) প্রসেস করা হয়, ঠিক manual entry-র মতোই একই `calcCarryFwd`
-ফাংশন ব্যবহার করে — তাই কেউ কোনো মাসে বেশি দিলে সেটা পরের মাসের due থেকে ঠিকভাবে বিয়োগ হয়ে যাবে, ঠিক
-যেমনটা সরাসরি অ্যাপে এন্ট্রি করলে হতো।
-
-**Idempotent-safe:** Flat ও Tenant নাম দিয়ে match করে — একই নামের Flat/Tenant থাকলে duplicate তৈরি হবে
-না, তাই ভুল হলে ঠিক করে আবার আপলোড করা নিরাপদ। তবে Payment history-র ক্ষেত্রে re-import করলে duplicate
-entry হতে পারে (যদি একই payment দুইবার আপলোড করা ফাইলে থাকে) — তাই payment sheet-গুলো সাবধানে পূরণ করা
-জরুরি।
-
-নতুন ফাইল: `lib/import-template.js`, `lib/import-processor.js`, `pages/api/import/template.js`,
-`pages/api/import/process.js`, `pages/import.js`। Sidebar-এ "Import Data" মেনু আইটেম যোগ হয়েছে।
-
-**যাচাই:** Template generation → parsing → validation পুরো flow আসলেই রান করে টেস্ট করা হয়েছে (নকল
-data দিয়ে সফল কেস আর ইচ্ছাকৃত ভুল data দিয়ে error-detection কেস — দুটোই সঠিকভাবে কাজ করেছে)।
-
-### ২. ল্যান্ডিং পেজ — বাংলা/English টগল
-
-ল্যান্ডিং পেজের উপরে ডানদিকে একটা "বাং / EN" টগল যোগ হয়েছে — ক্লিক করলে পুরো পেজ (hero, ফিচার, প্রাইসিং,
-FAQ, footer — সব) সংশ্লিষ্ট ভাষায় বদলে যায়। পছন্দ localStorage-এ সেভ থাকে, পরের ভিজিটে মনে রাখে।
-সব টেক্সট `lib/i18n-landing.js`-এ একটা dictionary আকারে আছে — নতুন কিছু যোগ/এডিট করতে হলে এখানেই করবেন।
-
-⚠️ App-এর ভেতরের অংশ (dashboard, Team/PINs ইত্যাদি) এখনো শুধু বাংলায় আছে — এই টগল শুধু পাবলিক ল্যান্ডিং
-পেজের জন্য।
-
----
-
-## এই সেশনে (v9) — দুইটা এরর নিয়ে
-
-### ১. 🔴 আসল বাগ ফিক্স হয়েছে: "max clients reached in session mode"
-
-**কারণ কী ছিল:** দুটো জিনিস একসাথে মিলে এই সমস্যা করেছে —
-
-1. `lib/db.js`-এ Prisma client শুধু **development**-এ cache হতো, **production**-এ (Vercel-এ যেটা আসলে
-   চলে) প্রতিবার নতুন client তৈরি হতো — প্রতিটা নতুন client মানে নতুন database connection।
-2. `.env`-এ Supabase-এর **"Session" mode** connection string ব্যবহার হচ্ছিল (port 5432), যেটা মাত্র
-   **১৫টা** concurrent connection-এ hard-capped (Supabase free tier)। Vercel-এ একসাথে অনেকগুলো
-   serverless function instance চলতে পারে, প্রত্যেকে নিজের connection ধরে রাখে — তাই দ্রুতই ১৫-এর
-   limit ছাড়িয়ে যায় আর "FATAL: max clients reached" এরর আসে।
-
-**যা ফিক্স করা হয়েছে:**
-- `lib/db.js` — এখন production-এও Prisma client cache হয় (Vercel-এর warm serverless container-এ
-  reuse হবে, connection leak কমবে)।
-- `.env.example` — এখন দুটো আলাদা URL চায়:
-  - `DATABASE_URL` — Supabase-এর **"Transaction"** pooler connection string (port **6543**,
-    `?pgbouncer=true` সহ) — এটা app runtime-এ ব্যবহার হয়, অনেক বেশি concurrent connection handle
-    করতে পারে।
-  - `DIRECT_URL` — সাধারণ direct connection (port 5432) — শুধু `npm run db:push`/migration চালানোর
-    সময় লাগে, কারণ schema change pooler দিয়ে ঠিকভাবে কাজ করে না।
-- `prisma/schema.prisma`-এ `directUrl` যোগ করা হয়েছে এই dual-connection pattern সাপোর্ট করার জন্য
-  (এটা Prisma-র নিজস্ব official recommendation Supabase + Vercel-এর জন্য)।
-
-**⚠️ তোমাকে যা করতে হবে (deploy করার আগে):**
-1. Supabase Dashboard → Project Settings → Database → Connection string-এ গিয়ে **"Transaction"**
-   ট্যাব থেকে URL কপি করে Vercel-এর `DATABASE_URL` environment variable আপডেট করো (এখন যেটা আছে সেটা
-   সম্ভবত "Session" ট্যাবেরটা, port 5432 দিয়ে শেষ — সেটা বদলাতে হবে)।
-2. একই পেজ থেকে direct URL (port 5432) কপি করে নতুন `DIRECT_URL` environment variable হিসেবে Vercel-এ
-   যোগ করো।
-3. Vercel-এ redeploy করো।
-
-### ২. ✅ এটা আমাদের bug না — Browser extension-এর এরর
-
-দ্বিতীয় স্ক্রিনশটের এররটা ("Cannot read properties of undefined reading 'M_ID'") আমাদের কোডের কোথাও
-থেকে আসছে না — screenshot-এর Call Stack-এ স্পষ্ট দেখা যাচ্ছে এটা
-`chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/...` থেকে আসছে, মানে এটা তোমার ব্রাউজারে ইনস্টল
-করা কোনো একটা **extension** (ad-blocker, password manager, বা অন্য কিছু) পেজে script ঢুকিয়ে দিচ্ছে
-আর নিজেই ক্র্যাশ করছে। আমি পুরো কোডবেসে `M_ID` লিখে সার্চ করেছি — কোথাও নেই। যাচাই করতে চাইলে
-Incognito window-এ (extension বন্ধ থাকে by default) সাইটটা খুলে দেখো, এই এরর আর আসবে না।
-
----
-
-## এই সেশনে (v10) — Google Sheet থেকে সরাসরি ইমপোর্ট
-
-### সমস্যা যা সমাধান হলো
-Excel টেমপ্লেট ডাউনলোড করে, ভরে, আবার আপলোড করা — এই পুরো রাউন্ড-ট্রিপ ৬ মাসের অনেক ডেটার জন্য
-সময়সাপেক্ষ। এখন **সরাসরি আপনার existing Google Sheet থেকে** ইমপোর্ট করা যায় — কোনো ডাউনলোড/আপলোড
-লাগে না।
-
-### কীভাবে কাজ করে
-`/import` পেজে এখন দুটো অপশন: **"Google Sheet থেকে"** (নতুন, ডিফল্ট) আর **"Excel ফাইল আপলোড"** (আগেরটা)।
-
-Google Sheet অপশনে:
-1. আপনার শিট **"Anyone with the link" (Viewer)** হিসেবে শেয়ার করুন (File → Share)
-2. লিংকটা কপি করে পেস্ট করুন
-3. সিস্টেম নিজে থেকেই আপনার শিটের ট্যাব ও কলাম বুঝে নেওয়ার চেষ্টা করবে — **flexible header matching**:
-   - ট্যাবের নাম "Flats"/"Flat", "Tenants"/"Tenant", "Rent Payments"/"RentPayments"/"Rent" ইত্যাদি
-     variant চলবে
-   - কলামের নাম "Tenant Name" বা শুধু "Name", "Flat ID" বা "Flat Name" বা শুধু "Flat" — সবই চলবে
-   - **আসল ব্যাপার:** যদি আপনার পুরনো শিট **এই একই Mess Manager অ্যাপের আগের Google Apps Script
-     ভার্সন** থেকে হয় (যেখানে Tenant-রা Flat-কে ID দিয়ে রেফার করে, যেমন "F001"), সেটাও কাজ করবে —
-     ID-ভিত্তিক আর নাম-ভিত্তিক দুই ধরনের রেফারেন্সই সাপোর্ট করা হয়েছে।
-4. Preview-তে দেখাবে কোন ট্যাব কী নামে পাওয়া গেছে, আর কোনো ভুল থাকলে ঠিক কোন সারিতে কী সমস্যা
-5. Confirm করলেই ডেটা যোগ হয়ে যায় — কোনো ফাইল ছাড়াই
-
-### টেকনিক্যাল নোট
-- Google Sheets-এর পাবলিক CSV export endpoint ব্যবহার করা হয়েছে (`gviz/tq?tqx=out:csv`) — কোনো
-  OAuth/API key লাগে না, শুধু শিট শেয়ার করা থাকতে হবে
-- Excel ও Google Sheet — দুটো path-ই এখন একই shared validator (`lib/import-shared.js`) ব্যবহার করে,
-  তাই দুটোতেই একই রকম সঠিকভাবে carry-forward calculation ও error detection কাজ করে
-- নতুন ফাইল: `lib/import-shared.js`, `lib/google-sheets-fetch.js`, `pages/api/import/google-sheet.js`
-
-### যাচাই যা করা হয়েছে (এবং একটা বাগ পেয়ে ফিক্স করা হয়েছে)
-Alias-matching validator বাস্তব-জগতের messy ডেটা দিয়ে টেস্ট করা হয়েছে (ভিন্ন casing, ID-ভিত্তিক
-রেফারেন্স, ইচ্ছাকৃত ভুল রেফারেন্স) — সব সঠিকভাবে ধরা পড়েছে। **টেস্ট করতে গিয়ে একটা আসল বাগ পাওয়া
-গেছে ও ফিক্স করা হয়েছে:** যখন কোনো payment sheet টেনেন্টকে শুধু ID দিয়ে রেফার করত (নাম/রুম কলাম ছাড়া),
-`commitImport` ভুলভাবে তার rent/name/room ফাঁকা/০ বসিয়ে দিচ্ছিল। এখন প্রতিটা resolved tenant reference
-সরাসরি একটা authoritative `tenantDataByRealId` map থেকে সঠিক তথ্য পায় — mocked database দিয়ে
-end-to-end টেস্ট করে নিশ্চিত করা হয়েছে এটা এখন সঠিকভাবে কাজ করছে।
+**Local `next build` fails with `Cannot find module '.prisma/client/default'`**
+Run `npx prisma generate` (or `npm install`, which does it via `postinstall`) — the Prisma
+client is generated from `prisma/schema.prisma` and isn't checked into git.

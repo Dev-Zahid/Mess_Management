@@ -1,7 +1,8 @@
 import { prisma } from '../../../lib/db';
 import { verifyPin, createSession } from '../../../lib/auth';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { pin } = req.body || {};
   const phone = String(req.body?.phone || '').trim();
@@ -15,4 +16,4 @@ export default async function handler(req, res) {
 
   createSession(res, user);
   return res.status(200).json({ ok: true, role: user.role });
-}
+});

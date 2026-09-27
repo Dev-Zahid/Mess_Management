@@ -2,7 +2,8 @@ import { prisma } from '../../../lib/db';
 import { requireSuperAdmin } from '../../../lib/guard';
 import { logAdminAction } from '../../../lib/audit';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   const result = await requireSuperAdmin(req);
   if (result.redirect) return res.status(401).json({ error: 'Unauthorized' });
   const admin = result.user;
@@ -39,4 +40,4 @@ export default async function handler(req, res) {
   }
 
   res.status(405).end();
-}
+});

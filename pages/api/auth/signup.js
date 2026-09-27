@@ -2,7 +2,8 @@ import { prisma } from '../../../lib/db';
 import { hashPin, createSession } from '../../../lib/auth';
 import { TRIAL_DAYS } from '../../../lib/plans';
 
-export default async function handler(req, res) {
+import { withJsonErrors } from '../../../lib/api-wrapper';
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { messName, ownerName, pin } = req.body || {};
   const phone = String(req.body?.phone || '').trim();
@@ -13,8 +14,8 @@ export default async function handler(req, res) {
   if (!/^01\d{9}$/.test(phone)) {
     return res.status(400).json({ error: 'সঠিক ১১ ডিজিট মোবাইল নম্বর দিন (01XXXXXXXXX)' });
   }
-  if (String(pin).length < 4) {
-    return res.status(400).json({ error: 'PIN কমপক্ষে ৪ ডিজিট হতে হবে' });
+  if (!/^\d{4,6}$/.test(String(pin))) {
+    return res.status(400).json({ error: 'PIN 4-6 digit সংখ্যা হতে হবে' });
   }
 
   const existing = await prisma.user.findUnique({ where: { phone } });
@@ -46,4 +47,4 @@ export default async function handler(req, res) {
 
   createSession(res, user);
   return res.status(200).json({ ok: true });
-}
+});

@@ -3,13 +3,22 @@ import formidable from 'formidable';
 import { getSession, effectiveOrgStatus } from '../../../lib/auth';
 import { prisma } from '../../../lib/db';
 import { parseWorkbook, commitImport } from '../../../lib/import-processor';
+import { withJsonErrors } from '../../../lib/api-wrapper';
 
 export const config = { api: { bodyParser: false } };
 
-export default async function handler(req, res) {
+export default withJsonErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const session = getSession(req);
   if (!session || !session.orgId) return res.status(401).json({ error: 'লগইন করুন' });
+
+  // Bulk import can create/overwrite Flats, Tenants and payments across the
+  // whole org — Admin/Owner only, regardless of any Management permission
+  // toggles (those govern individual resources, not a bulk-overwrite tool).
+  const me = await prisma.user.findUnique({ where: { id: session.uid } });
+  if (!me || me.orgId !== session.orgId || (me.role !== 'Owner' && me.role !== 'Admin')) {
+    return res.status(403).json({ error: 'শুধু Admin এই কাজটি করতে পারবেন।' });
+  }
 
   const org = await prisma.organization.findUnique({ where: { id: session.orgId } });
   if (!org) return res.status(401).json({ error: 'অ্যাকাউন্ট পাওয়া যায়নি' });
@@ -60,4 +69,4 @@ export default async function handler(req, res) {
     console.error('Import commit error:', e);
     return res.status(500).json({ error: 'ইমপোর্ট করতে সমস্যা হয়েছে: ' + e.message });
   }
-}
+});
