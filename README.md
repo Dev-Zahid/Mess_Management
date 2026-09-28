@@ -213,6 +213,20 @@ A recent audit of this codebase found and fixed:
 5. Signup PIN validation was weaker (any 4+ characters) than everywhere else in the app
    (`4–6 digits`) — made consistent.
 
+6. Every API route now returns JSON on unexpected errors (`lib/api-wrapper.js`) instead of an
+   HTML error page, so failures no longer show up as `Unexpected token '<'`.
+7. Tenant leave date: a tenant marked *Left* with a **future** leave date stays Active (and keeps
+   the seat) until that date has passed; then becomes Left automatically.
+8. Tenant ID is generated on the server (`T001`, `T002`, …) — not typed by hand.
+9. Owner Panel and Expenses month/year filters now apply to the summary cards too, not only the
+   tables.
+10. Service Charge / Advance Money **Unpaid** filter now lists tenants who have not paid anything
+    (they have no payment row, so they used to be invisible).
+11. **Settle & Exit** records the advance refund (`settleTenant`): it is added to Owner Panel →
+    *Refunded / Spent* and removed from Advance Money *Collected*/*Held*.
+12. Advance handed to the flat owner (Owner Advance Money) is now subtracted from the tenant
+    deposits *Held* balance in Owner Panel and Expenses.
+
 ## Known limitations (not fixed — worth knowing about)
 
 - **ID generation** (`genId()` in `lib/gen-id.js`) computes the next sequential ID

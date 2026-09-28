@@ -383,7 +383,7 @@
   <div class="modal">
     <div class="mh"><h3 id="tm-ttl">Add Tenant</h3><button class="btn bs" onclick="closeM('m-ten')"><i class="ti ti-x"></i></button></div>
     <div class="mb">
-      <div class="fr"><div class="fg"><label>Flat *</label><select id="t-flat" onchange="onTenantFlatChange()"><option value="">-- Select Flat --</option></select></div><div class="fg"><label>Tenant ID *</label><input id="ti" placeholder="T001"><div class="hint">Unique across all flats</div></div></div>
+      <div class="fr"><div class="fg"><label>Flat *</label><select id="t-flat" onchange="onTenantFlatChange()"><option value="">-- Select Flat --</option></select></div><div class="fg"><label>Tenant ID *</label><input id="ti" placeholder="Auto" readonly style="background:var(--bg);cursor:not-allowed"><div class="hint">Auto-generated (T001, T002…)</div></div></div>
       <div class="fr"><div class="fg"><label>Full Name *</label><input id="tn" placeholder="Name"></div><div class="fg" id="t-room-manual-wrap" style="display:none"><label>Room/Seat</label><input id="tr_" placeholder="101"><div class="hint">এই Flat-এর জন্য এখনো Room/Seat তৈরি করা হয়নি — Flats page থেকে করুন</div></div></div>
       <div class="fr" id="t-room-select-wrap"><div class="fg"><label>Room *</label><select id="t-room-sel" onchange="onTenantRoomChange()"><option value="">-- আগে Flat বেছে নিন --</option></select></div><div class="fg"><label>Seat *</label><select id="t-seat-sel"><option value="">-- Select Seat --</option></select></div></div>
       <div class="fr c3"><div class="fg"><label>Phone</label><input id="tp" placeholder="01711-000000"></div><div class="fg"><label>Monthly Rent ৳</label><input id="trnt" type="number" placeholder="5000"></div><div class="fg"><label>Status</label><select id="ts" onchange="toggleLeftDate()"><option>Active</option><option>Inactive</option><option>Left</option></select></div></div>
@@ -1376,7 +1376,7 @@ function renderTenants(){
       <td style="font-weight:700">৳${fmt(t.rent)}</td><td>৳${fmt(t.serviceCharge)}</td><td>৳${fmt(t.advanceDue)}</td>
       <td style="color:var(--mu)">${t.entry}</td>
       <td style="color:var(--rd);font-size:11px">${t.leftDate||'—'}</td>
-      <td>${badge(t.status)}</td>
+      <td>${badge(t.status)}${t.leaving?`<div style="font-size:10px;color:var(--yw);margin-top:2px">${esc(t.leftDate)} তারিখে ছাড়বে</div>`:''}</td>
       <td><div style="display:flex;gap:3px">
         <button class="btn bs" onclick="openLedger('${t.id}')" title="Payment History"><i class="ti ti-history"></i></button>
         ${t.status==='Active'&&canEdit('tenants')?`<button class="btn bs" onclick="openSettle('${t.id}')" title="Settle & Exit"><i class="ti ti-door-exit"></i></button>`:''}
@@ -1447,7 +1447,7 @@ function tenantRoomCombined(){
 function toggleLeftDate(){const s=document.getElementById('ts').value;document.getElementById('left-date-grp').style.display=(s==='Left'||s==='Inactive')?'':'none';}
 function openAddTenant(){
   editTId=null;document.getElementById('tm-ttl').textContent='Add Tenant';
-  ['ti','tn','tr_','tp','trnt','tsvc','tadv','tnote'].forEach(id=>document.getElementById(id).value='');
+  ['ti','tn','tr_','tp','trnt','tsvc','tadv','tnote'].forEach(id=>document.getElementById(id).value='');document.getElementById('ti').placeholder='Auto (save করলে তৈরি হবে)';
   document.getElementById('tent').value=todayISO();document.getElementById('tleft').value='';document.getElementById('ts').value='Active';document.getElementById('left-date-grp').style.display='none';
   populateFlatDropdowns();onTenantFlatChange();
   setBusy('save-t',false,'<i class="ti ti-check"></i> Save');openM('m-ten');
@@ -1457,16 +1457,16 @@ function openEditTenant(id){
   editTId=id;document.getElementById('tm-ttl').textContent='Edit Tenant';
   document.getElementById('ti').value=t.id;document.getElementById('tn').value=t.name;document.getElementById('tp').value=t.phone;
   document.getElementById('trnt').value=t.rent;document.getElementById('tsvc').value=t.serviceCharge;document.getElementById('tadv').value=t.advanceDue;
-  const ent=t.entry?new Date(t.entry):null;document.getElementById('tent').value=ent&&!isNaN(ent)?dateToISO(ent):todayISO();document.getElementById('ts').value=t.status;document.getElementById('tnote').value=t.notes;
+  const ent=t.entry?new Date(t.entry):null;document.getElementById('tent').value=ent&&!isNaN(ent)?dateToISO(ent):todayISO();document.getElementById('ts').value=t.rawStatus||t.status;document.getElementById('tnote').value=t.notes;
   const left=t.leftDate?new Date(t.leftDate):null;document.getElementById('tleft').value=left&&!isNaN(left)?dateToISO(left):'';
-  document.getElementById('left-date-grp').style.display=(t.status==='Left'||t.status==='Inactive')?'':'none';
+  const rs=t.rawStatus||t.status;document.getElementById('left-date-grp').style.display=(rs==='Left'||rs==='Inactive')?'':'none';
   populateFlatDropdowns();document.getElementById('t-flat').value=t.flatId||'';
   initTenantRoomSeat(t.room);
   setBusy('save-t',false,'<i class="ti ti-check"></i> Update');openM('m-ten');
 }
 function saveTenant(){
   const id=document.getElementById('ti').value.trim(),nm=document.getElementById('tn').value.trim();
-  if(!id||!nm){toast('ID & Name required','er');return;}
+  if(!nm||(editTId&&!id)){toast('Name required','er');return;}
   const room=tenantRoomCombined();
   if(document.getElementById('t-room-select-wrap').style.display!=='none'&&!room){toast('Room ও Seat select করুন','er');return;}
   const data={flatId:document.getElementById('t-flat').value,id,name:nm,room,phone:document.getElementById('tp').value.trim(),rent:N(document.getElementById('trnt').value),serviceCharge:N(document.getElementById('tsvc').value),advanceDue:N(document.getElementById('tadv').value),entry:document.getElementById('tent').value,leftDate:document.getElementById('tleft').value,status:document.getElementById('ts').value,notes:document.getElementById('tnote').value.trim()};
@@ -1521,7 +1521,8 @@ function openSettle(tid){
   const advPaid=DB.advPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
   const advRemaining=Math.max(0,N(t.advanceDue)-advPaid); // unpaid advance, not relevant to refund
   const totalOwedByTenant=rentDue+svcDue;
-  const net=advPaid-totalOwedByTenant; // +ve => refund to tenant, -ve => tenant owes
+  const alreadyRefunded=(DB.expenses||[]).filter(e=>String(e.notes||'').startsWith('REFUND:'+tid)).reduce((a,e)=>a+N(e.amount),0);
+  const net=advPaid-alreadyRefunded-totalOwedByTenant; // +ve => refund to tenant, -ve => tenant owes
   editSettleTid=tid;
   document.getElementById('settle-body').innerHTML=`
     <div class="ibox warn"><i class="ti ti-alert-triangle"></i><div><strong>${esc(t.name)}</strong> কে Left mark করার আগে হিসাবটা দেখে নিন। Confirm করলে status "Left" হয়ে যাবে।</div></div>
@@ -1531,18 +1532,20 @@ function openSettle(tid){
       ${advRemaining>0?`<tr><td style="padding:6px 0;color:var(--mu)">Advance এখনও বাকি (কখনো নেওয়া হয়নি)</td><td style="text-align:right;color:var(--mu)">৳${fmt(advRemaining)}</td></tr>`:''}
       <tr style="border-top:1.5px solid var(--bd)"><td style="padding:8px 0;font-weight:700">${net>=0?'Tenant-কে ফেরত দিতে হবে':'Tenant-এর কাছে পাওনা আছে'}</td><td style="text-align:right;font-weight:700;font-size:16px;color:${net>=0?'var(--gn)':'var(--rd)'}">৳${fmt(Math.abs(net))}</td></tr>
     </table>
-    <div class="hint" style="margin-top:8px">হিসাব: Advance জমা − (বাকি Rent + Service)। এটা শুধু হিসাব দেখানোর জন্য — Advance ফেরত দেওয়ার entry আলাদাভাবে (নগদে) করতে হবে, app এখান থেকে automatically টাকা ফেরত পাঠায় না।</div>`;
+    <div class="fg" style="margin-top:10px"><label>Advance ফেরত দিচ্ছেন (৳)</label><input type="number" id="settle-refund" min="0" value="${Math.max(0,net)}"><div class="hint">এই amount Owner Panel-এর "Refunded / Spent"-এ যোগ হবে এবং Advance Money-র Collected/Held থেকে বাদ যাবে। ফেরত না দিলে 0 দিন।</div></div>
+    <div class="fg" style="margin-top:10px"><label>Exit Date (ভবিষ্যতের তারিখ দিলে ওই তারিখ পর্যন্ত Active থাকবে)</label><input type="date" id="settle-date" value="${todayISO()}"></div>
+    <div class="hint" style="margin-top:8px">হিসাব: Advance জমা − (বাকি Rent + Service)। টাকা নগদে/bKash-এ আপনি নিজে দেবেন — app শুধু হিসাবের entry রাখে।</div>`;
   openM('m-settle');
 }
 function confirmSettle(){
   const t=DB.tenants.find(x=>x.id===editSettleTid);if(!t)return;
   setBusy('confirm-settle-btn',true,'');
-  const data={id:t.id,flatId:t.flatId,name:t.name,room:t.room,phone:t.phone,rent:t.rent,serviceCharge:t.serviceCharge,advanceDue:t.advanceDue,entry:t.entry,leftDate:'',status:'Left',notes:t.notes};
+  const data={tid:t.id,exitDate:(document.getElementById('settle-date')||{}).value||'',refundAmount:N((document.getElementById('settle-refund')||{}).value)};
   google.script.run.withSuccessHandler(r=>{
     setBusy('confirm-settle-btn',false,'<i class="ti ti-door-exit"></i> Confirm Exit');
-    if(r.success){toast('Settled & marked Left','ok');closeM('m-settle');clearCache();quickRefresh();}
+    if(r.success){toast(r.message||'Settled & marked Left','ok');closeM('m-settle');clearCache();quickRefresh();}
     else toast(r.message,'er');
-  }).withFailureHandler(e=>{setBusy('confirm-settle-btn',false,'<i class="ti ti-door-exit"></i> Confirm Exit');toast('Error: '+e,'er');}).updateTenant(data);
+  }).withFailureHandler(e=>{setBusy('confirm-settle-btn',false,'<i class="ti ti-door-exit"></i> Confirm Exit');toast('Error: '+e,'er');}).settleTenant(data);
 }
 
 // ── Feature 7: Payment Receipt (print / WhatsApp share) ──────
@@ -1601,8 +1604,8 @@ function printOwnerStatement(){
   let flatRows='';
   if(curFlat==='ALL'){
     flatRows=DB.flats.map(f=>{
-      const fR=DB.rentPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0),fO=DB.ownerPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
-      const fSC=DB.svcPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0),fE=DB.expenses.filter(e=>e.flatId===f.id&&e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+      const fR=DB.rentPays.filter(p=>p.flatId===f.id&&byMY(p)).reduce((a,p)=>a+N(p.paid),0),fO=DB.ownerPays.filter(p=>p.flatId===f.id&&byMY(p)).reduce((a,p)=>a+N(p.paid),0);
+      const fSC=DB.svcPays.filter(p=>p.flatId===f.id&&byDate(p)).reduce((a,p)=>a+N(p.paid),0),fE=DB.expenses.filter(e=>e.flatId===f.id&&e.source==='Service Charge'&&byDate(e)).reduce((a,e)=>a+N(e.amount),0);
       const fNet=(fR-fO)+(fSC-fE);
       return `<tr><td>${esc(f.name)}</td><td>৳${fmt(fR)}</td><td>৳${fmt(fO)}</td><td style="font-weight:700">৳${fmt(fNet)}</td></tr>`;
     }).join('');
@@ -1739,12 +1742,17 @@ function renderSvcPays(){
     <div class="ov-item"><div class="sl">Expense Balance</div><div class="sv ${tColl>=tExp?'gn':'rd'}">৳${fmt(tColl-tExp)}</div></div>`;
   const mon=document.getElementById('svc-mon').value,yr=N(document.getElementById('svc-yr').value);
   let list=filterByFlat(DB.svcPays).filter(notInactive).map(p=>{const s=svcSummary(p.tid);return{...p,_due:s.due,_totalPaid:s.paid,status:s.status};});
-  if(mon)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&MONTHS[d.getMonth()]===mon;});
-  if(yr)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&d.getFullYear()===yr;});
-  if(svcF!=='All')list=list.filter(p=>p.status===svcF);
+  list=list.filter(p=>inPeriod(p.date,mon,yr));
+  // Tenants who haven't paid anything have no payment row at all, so the
+  // "Unpaid" filter (and the All view) must add virtual rows for them.
+  const unpaidRows=allA.filter(t=>N(t.serviceCharge)>0).map(t=>({t,s:svcSummary(t.id)})).filter(x=>x.s.status==='Unpaid')
+    .map(({t,s})=>({id:'',date:'',flatId:t.flatId,tid:t.id,name:t.name,serviceTotal:t.serviceCharge,paid:0,_totalPaid:0,_due:s.due,method:'—',receipt:'—',status:'Unpaid',_virtual:true}));
+  if(svcF==='Unpaid')list=unpaidRows;
+  else if(svcF==='All'){if(!mon&&!yr)list=[...list,...unpaidRows];}
+  else list=list.filter(p=>p.status===svcF);
   list=applySort(list,sortS.svc);
   document.getElementById('svc-body').innerHTML=list.length
-    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.serviceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td><div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('service','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delSVC('${p.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('')
+    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${p._virtual?'—':fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.serviceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td>${p._virtual?'':`<div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('service','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delSVC('${p.id}')"><i class="ti ti-trash"></i></button></div>`}</td></tr>`).join('')
     :`<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--mu)">No service payments found</td></tr>`;
 }
 function fSVC(f){svcF=f;document.querySelectorAll('[data-svcf]').forEach(b=>b.classList.toggle('on',b.dataset.svcf===f));renderSvcPays();}
@@ -1766,7 +1774,9 @@ function delSVC(id){if(!confirm('Delete?'))return;google.script.run.withSuccessH
 function renderAdvPays(){
   const allA=curFlat==='ALL'?DB.tenants.filter(t=>t.status==='Active'):DB.tenants.filter(t=>t.status==='Active'&&(t.flatId===curFlat||!t.flatId));
   const notInactive=p=>{const t=DB.tenants.find(x=>x.id===p.tid);return !t||t.status!=='Inactive';};
-  const tDue=allA.reduce((a,t)=>a+N(t.advanceDue),0),tColl=filterByFlat(DB.advPays).filter(notInactive).reduce((a,p)=>a+N(p.paid),0);
+  // Collected = money actually held: advance paid minus advance already refunded on exit.
+  const refunded=filterByFlat(DB.expenses||[]).filter(e=>String(e.notes||'').startsWith('REFUND:')).reduce((a,e)=>a+N(e.amount),0);
+  const tDue=allA.reduce((a,t)=>a+N(t.advanceDue),0),tColl=Math.max(0,filterByFlat(DB.advPays).filter(notInactive).reduce((a,p)=>a+N(p.paid),0)-refunded);
   const pct=tDue>0?Math.min(100,Math.round(tColl/tDue*100)):0;
   document.getElementById('adv-ov').innerHTML=`
     <div class="ov-item"><div class="sl">Total Due</div><div class="sv bl">৳${fmt(tDue)}</div><div class="prog"><div class="pf" style="width:${pct}%;background:var(--gn)"></div></div></div>
@@ -1774,12 +1784,15 @@ function renderAdvPays(){
     <div class="ov-item"><div class="sl">Remaining</div><div class="sv rd">৳${fmt(Math.max(0,tDue-tColl))}</div></div>`;
   const mon=document.getElementById('adv-mon').value,yr=N(document.getElementById('adv-yr').value);
   let list=filterByFlat(DB.advPays).filter(notInactive).map(p=>{const s=advSummary(p.tid);return{...p,_due:s.due,_totalPaid:s.paid,status:s.status};});
-  if(mon)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&MONTHS[d.getMonth()]===mon;});
-  if(yr)list=list.filter(p=>{const d=new Date(p.date);return !isNaN(d)&&d.getFullYear()===yr;});
-  if(advF!=='All')list=list.filter(p=>p.status===advF);
+  list=list.filter(p=>inPeriod(p.date,mon,yr));
+  const unpaidRows=allA.filter(t=>N(t.advanceDue)>0).map(t=>({t,s:advSummary(t.id)})).filter(x=>x.s.status==='Unpaid')
+    .map(({t,s})=>({id:'',date:'',flatId:t.flatId,tid:t.id,name:t.name,advanceTotal:t.advanceDue,paid:0,_totalPaid:0,_due:s.due,method:'—',receipt:'—',status:'Unpaid',_virtual:true}));
+  if(advF==='Unpaid')list=unpaidRows;
+  else if(advF==='All'){if(!mon&&!yr)list=[...list,...unpaidRows];}
+  else list=list.filter(p=>p.status===advF);
   list=applySort(list,sortS.adv);
   document.getElementById('adv-body').innerHTML=list.length
-    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.advanceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td><div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('advance','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delADV('${p.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('')
+    ?list.map(p=>`<tr class="${rowC(p.status)}"><td>${p._virtual?'—':fmtDate(p.date)}</td><td>${ftag(p.flatId)}</td><td>${esc(p.name)}</td><td>৳${fmt(p.advanceTotal)}</td><td style="font-weight:700;color:var(--gn)">৳${fmt(p.paid)}</td><td>৳${fmt(p._totalPaid)}</td><td style="color:var(--rd)">৳${fmt(p._due)}</td><td>${esc(p.method)}</td><td><span class="tag">${esc(p.receipt)}</span></td><td>${badge(p.status)}</td><td>${p._virtual?'':`<div style="display:flex;gap:3px"><button class="btn bs" onclick="openReceipt('advance','${p.id}')" title="Receipt"><i class="ti ti-receipt"></i></button><button class="btn bs bd_" onclick="delADV('${p.id}')"><i class="ti ti-trash"></i></button></div>`}</td></tr>`).join('')
     :`<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--mu)">No advance payments found</td></tr>`;
 }
 function fADV(f){advF=f;document.querySelectorAll('[data-advf]').forEach(b=>b.classList.toggle('on',b.dataset.advf===f));renderAdvPays();}
@@ -1860,26 +1873,26 @@ let expF='All';
 function fExp(v){expF=v;document.querySelectorAll('[data-expf]').forEach(b=>b.classList.toggle('on',b.dataset.expf===v));renderExpenses();}
 function renderExpenses(){
   const mon=document.getElementById('exp-mon').value,yr=N(document.getElementById('exp-yr').value);
-  let list=filterByFlat(DB.expenses);
-  if(mon) list=list.filter(e=>{const d=new Date(e.date);return MONTHS[d.getMonth()]===mon;});
-  if(yr) list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===yr;});
-  const svcColl=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0);
+  const per=x=>inPeriod(x.date,mon,yr);
+  const lbl=(mon||yr)?'(period)':'(all-time)';
+  let list=filterByFlat(DB.expenses).filter(per);
+  const svcColl=filterByFlat(DB.svcPays).filter(per).reduce((a,p)=>a+N(p.paid),0);
   const svcExp=list.filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
-  const ownExp=list.filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
   const svcBal=svcColl-svcExp;
-  const totalInvested=filterByFlat(DB.investments).reduce((a,i)=>a+N(i.amount),0);
-  const ownExpAllTime=filterByFlat(DB.expenses).filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
-  const ownBal=totalInvested-ownExpAllTime;
-  const advColl=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0);
-  const advExpAllTime=filterByFlat(DB.expenses).filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
-  const advBal=advColl-advExpAllTime;
+  const totalInvested=filterByFlat(DB.investments).filter(per).reduce((a,i)=>a+N(i.amount),0);
+  const ownExp=list.filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const ownBal=totalInvested-ownExp;
+  const advColl=filterByFlat(DB.advPays).filter(per).reduce((a,p)=>a+N(p.paid),0);
+  const advExp=list.filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
+  const advToOwner=filterByFlat(DB.ownerAdvances).filter(per).reduce((a,x)=>a+N(x.amount),0);
+  const advBal=advColl-advExp-advToOwner;
   document.getElementById('exp-cards').innerHTML=`
     <div class="stl" style="margin-top:0"><i class="ti ti-tool"></i>Service Charge</div>
-    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(svcColl),'Svc Collected (all-time)','ti-cash','gn'],['৳'+fmt(svcExp),'Service-Funded Expense','ti-receipt','rd'],['৳'+fmt(svcBal),'Service Balance','ti-wallet',svcBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(svcColl),'Svc Collected '+lbl,'ti-cash','gn'],['৳'+fmt(svcExp),'Service-Funded Expense','ti-receipt','rd'],['৳'+fmt(svcBal),'Service Balance','ti-wallet',svcBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
     <div class="stl"><i class="ti ti-wallet-off"></i>Owner Pocket</div>
-    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(totalInvested),'Total Invested','ti-hammer','pu'],['৳'+fmt(ownExpAllTime),'Owner Pocket Expense (all-time)','ti-receipt','rd'],['৳'+fmt(ownBal),'Owner Pocket Balance','ti-wallet',ownBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(totalInvested),'Total Invested '+lbl,'ti-hammer','pu'],['৳'+fmt(ownExp),'Owner Pocket Expense','ti-receipt','rd'],['৳'+fmt(ownBal),'Owner Pocket Balance','ti-wallet',ownBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
     <div class="stl"><i class="ti ti-coin"></i>Advance Money (tenant-দের advance collection থেকে খরচ)</div>
-    <div class="cards">${[['৳'+fmt(advColl),'Advance Collected (all-time)','ti-cash','gn'],['৳'+fmt(advExpAllTime),'Advance-Funded Expense','ti-receipt','rd'],['৳'+fmt(advBal),'Advance Balance','ti-wallet',advBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>`;
+    <div class="cards">${[['৳'+fmt(advColl),'Advance Collected '+lbl,'ti-cash','gn'],['৳'+fmt(advExp),'Advance-Funded Expense / Refund','ti-receipt','rd'],['৳'+fmt(advToOwner),'Given to Owner (Advance)','ti-arrow-up-circle','or'],['৳'+fmt(advBal),'Advance Balance','ti-wallet',advBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>`;
   if(expF!=='All') list=list.filter(e=>e.source===expF);
   document.getElementById('exp-body').innerHTML=[...list].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<tr class="ror"><td>${fmtDate(e.date)}</td><td>${ftag(e.flatId)}</td><td style="font-weight:600">${esc(e.title)}</td><td><span class="badge ${e.source==='Owner Pocket'?'bpu':e.source==='Advance Money'?'bor':'bbl'}">${esc(e.source)}</span></td><td style="font-weight:700;color:var(--rd)">৳${fmt(e.amount)}</td><td style="color:var(--mu)">${esc(e.notes)}</td><td>${canDelete('expenses')?`<button class="btn bs bd_" onclick="delExp('${e.id}')"><i class="ti ti-trash"></i></button>`:''}</td></tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--mu)">No expenses</td></tr>`;
 }
@@ -1895,24 +1908,37 @@ function delExp(id){if(!confirm('Delete expense?'))return;google.script.run.with
 //  OWNER PANEL — per-flat breakdown + combined
 // ═══════════════════════════════════════════════════════════
 function renderOwners(){
-  const tRent=filterByFlat(DB.rentPays).reduce((a,p)=>a+N(p.paid),0);
-  const tOwner=filterByFlat(DB.ownerPays).reduce((a,p)=>a+N(p.paid),0);
-  const tInv=filterByFlat(DB.investments).reduce((a,i)=>a+N(i.amount),0);
-  const svcColl=filterByFlat(DB.svcPays).reduce((a,p)=>a+N(p.paid),0);
-  const svcExp=filterByFlat(DB.expenses).filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
-  const ownExp=filterByFlat(DB.expenses).filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
-  const advTenantColl=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0);
-  const advExp=filterByFlat(DB.expenses).filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
-  const advBal=advTenantColl-advExp;
+  const mon=document.getElementById('own-mon').value,yr=N(document.getElementById('own-yr').value);
+  const byMY=p=>(!mon||p.month===mon)&&(!yr||N(p.year)===yr);   // rent / owner payments: period they're FOR
+  const byDate=x=>inPeriod(x.date,mon,yr);                        // everything else: by entry date
+  const isRefund=e=>String(e.notes||'').startsWith('REFUND:');
+  const tRent=filterByFlat(DB.rentPays).filter(byMY).reduce((a,p)=>a+N(p.paid),0);
+  const tOwner=filterByFlat(DB.ownerPays).filter(byMY).reduce((a,p)=>a+N(p.paid),0);
+  const tInv=filterByFlat(DB.investments).filter(byDate).reduce((a,i)=>a+N(i.amount),0);
+  const svcColl=filterByFlat(DB.svcPays).filter(byDate).reduce((a,p)=>a+N(p.paid),0);
+  const expP=filterByFlat(DB.expenses).filter(byDate);
+  const svcExp=expP.filter(e=>e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
+  const ownExp=expP.filter(e=>e.source==='Owner Pocket').reduce((a,e)=>a+N(e.amount),0);
+  const advTenantColl=filterByFlat(DB.advPays).filter(byDate).reduce((a,p)=>a+N(p.paid),0);
+  const advExp=expP.filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0);
+  const advRefunded=expP.filter(e=>e.source==='Advance Money'&&isRefund(e)).reduce((a,e)=>a+N(e.amount),0);
+  const advToOwner=filterByFlat(DB.ownerAdvances).filter(byDate).reduce((a,x)=>a+N(x.amount),0);
+  // Held (liability) is a running balance, so it is always all-time:
+  // everything collected − refunded/spent − advance handed to the flat owner.
+  const heldAll=filterByFlat(DB.advPays).reduce((a,p)=>a+N(p.paid),0)
+    -filterByFlat(DB.expenses).filter(e=>e.source==='Advance Money').reduce((a,e)=>a+N(e.amount),0)
+    -filterByFlat(DB.ownerAdvances).reduce((a,x)=>a+N(x.amount),0);
   const rentProfit=tRent-tOwner,svcBal=svcColl-svcExp,net=rentProfit+svcBal,ownBal=tInv-ownExp;
-  const advColl=filterByFlat(DB.ownerAdvances).reduce((a,x)=>a+N(x.amount),0);
+  const advColl=advToOwner;
+  const per=(mon||yr)?` <span style="font-weight:400;color:var(--mu);font-size:11px">— ${mon||'All months'} ${yr||''}</span>`:'';
   document.getElementById('own-cards').innerHTML=`
+    <div class="stl" style="margin-top:0"><i class="ti ti-home"></i>Rent &amp; Service${per}</div>
     <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(tRent),'Rent Collected','ti-cash','gn'],['৳'+fmt(tOwner),'Owner Paid','ti-home','rd'],['৳'+fmt(rentProfit),'Rent Profit','ti-trending-up',rentProfit>=0?'gn':'rd'],['৳'+fmt(svcBal),'Service Balance','ti-tool',svcBal>=0?'gn':'rd'],['৳'+fmt(net),'Net Balance','ti-wallet',net>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
-    <div class="stl"><i class="ti ti-wallet-off"></i>Owner Pocket</div>
+    <div class="stl"><i class="ti ti-wallet-off"></i>Owner Pocket${per}</div>
     <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(tInv),'Total Invested','ti-hammer','pu'],['৳'+fmt(ownExp),'Owner Pocket Expense','ti-receipt','rd'],['৳'+fmt(ownBal),'Owner Pocket Balance','ti-wallet',ownBal>=0?'gn':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
-    <div class="stl"><i class="ti ti-pig-money"></i>Advance Money (Tenant Deposits)</div>
-    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(advTenantColl),'Total Collected','ti-arrow-down-circle','gn'],['৳'+fmt(advExp),'Refunded / Spent','ti-receipt','rd'],['৳'+fmt(advBal),'Held (Liability)','ti-lock',advBal>=0?'am':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
-    <div class="stl"><i class="ti ti-coin"></i>Owner Advance Money</div>
+    <div class="stl"><i class="ti ti-pig-money"></i>Advance Money (Tenant Deposits)${per}</div>
+    <div class="cards" style="margin-bottom:11px">${[['৳'+fmt(advTenantColl),'Total Collected','ti-arrow-down-circle','gn'],['৳'+fmt(advExp),'Refunded / Spent'+(advRefunded?' (refund ৳'+fmt(advRefunded)+')':''),'ti-receipt','rd'],['৳'+fmt(advToOwner),'Given to Owner (Advance)','ti-arrow-up-circle','or'],['৳'+fmt(heldAll),'Held (Liability, all-time)','ti-lock',heldAll>=0?'am':'rd']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>
+    <div class="stl"><i class="ti ti-coin"></i>Owner Advance Money${per}</div>
     <div class="cards">${[['৳'+fmt(advColl),'Total Advance Given to Owner','ti-arrow-up-circle','or']].map(([v,l,ic,c])=>statCard(v,l,ic,c)).join('')}</div>`;
 
   // Per-flat breakdown
@@ -1923,7 +1949,7 @@ function renderOwners(){
         ${DB.flats.map(f=>{
           const fR=DB.rentPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
           const fO=DB.ownerPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
-          const fI=DB.investments.filter(i=>i.flatId===f.id).reduce((a,i)=>a+N(i.amount),0);
+          const fI=DB.investments.filter(i=>i.flatId===f.id&&byDate(i)).reduce((a,i)=>a+N(i.amount),0);
           const fSC=DB.svcPays.filter(p=>p.flatId===f.id).reduce((a,p)=>a+N(p.paid),0);
           const fE=DB.expenses.filter(e=>e.flatId===f.id&&e.source==='Service Charge').reduce((a,e)=>a+N(e.amount),0);
           const fPr=fR-fO,fSB=fSC-fE,fNet=fPr+fSB;
@@ -1944,12 +1970,25 @@ function openInvModal(){populateFlatDropdowns();document.getElementById('invd').
 function saveInv(){const title=document.getElementById('invtitle').value.trim(),amt=N(document.getElementById('invamt').value);if(!title||amt<=0){toast('Title & amount required','er');return;}const data={date:document.getElementById('invd').value,flatId:document.getElementById('inv-flat').value,title,amount:amt,notes:document.getElementById('invnote').value.trim()};setBusy('save-inv',true,'');google.script.run.withSuccessHandler(r=>{setBusy('save-inv',false,'<i class="ti ti-check"></i> Save');if(r.success){toast(r.message,'ok');closeM('m-inv');clearCache();quickRefresh();}else toast(r.message,'er');}).withFailureHandler(e=>{setBusy('save-inv',false,'<i class="ti ti-check"></i> Save');toast('Error: '+e,'er');}).addInvestment(data);}
 function delInv(id){if(!confirm('Delete?'))return;google.script.run.withSuccessHandler(r=>{if(r.success){toast(r.message,'ok');clearCache();quickRefresh();}else toast(r.message,'er');}).deleteInvestment(id);}
 
-// ── Owner Panel month/year filter (applies to Owner Payments, Investments, Owner Advance tables) ──
+// ── Month/Year period helpers (used by Owner Panel, Expenses, Service, Advance) ──
+function dParts(s){
+  const x=String(s||'');const m=x.match(/^(\d{4})-(\d{2})/);
+  if(m)return{y:+m[1],m:+m[2]-1};
+  const d=new Date(x);return isNaN(d)?null:{y:d.getFullYear(),m:d.getMonth()};
+}
+function inPeriod(dateStr,mon,yr){
+  if(!mon&&!yr)return true;
+  const p=dParts(dateStr);if(!p)return false;
+  if(mon&&MONTHS[p.m]!==mon)return false;
+  if(yr&&p.y!==yr)return false;
+  return true;
+}
+// Owner Panel month/year filter — Owner Payments carry their own month/year
+// (the period they were paid FOR), everything else is filtered by its date.
 function ownDateFilter(x){
   const mon=document.getElementById('own-mon').value,yr=N(document.getElementById('own-yr').value);
-  if(mon){const d=new Date(x.date);if(isNaN(d)||MONTHS[d.getMonth()]!==mon)return false;}
-  if(yr){const d=new Date(x.date);if(isNaN(d)||d.getFullYear()!==yr)return false;}
-  return true;
+  if(x.month&&x.flatRent!==undefined)return(!mon||x.month===mon)&&(!yr||N(x.year)===yr);
+  return inPeriod(x.date,mon,yr);
 }
 
 // ── Owner Advance Money (money owner gave when flat was taken) ──
