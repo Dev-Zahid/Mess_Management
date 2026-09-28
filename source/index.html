@@ -1521,7 +1521,7 @@ function openSettle(tid){
   const advPaid=DB.advPays.filter(p=>p.tid===tid).reduce((a,p)=>a+N(p.paid),0);
   const advRemaining=Math.max(0,N(t.advanceDue)-advPaid); // unpaid advance, not relevant to refund
   const totalOwedByTenant=rentDue+svcDue;
-  const alreadyRefunded=(DB.expenses||[]).filter(e=>String(e.notes||'').startsWith('REFUND:'+tid)).reduce((a,e)=>a+N(e.amount),0);
+  const alreadyRefunded=(DB.expenses||[]).filter(e=>String(e.notes||'')==='REFUND:'+tid).reduce((a,e)=>a+N(e.amount),0);
   const net=advPaid-alreadyRefunded-totalOwedByTenant; // +ve => refund to tenant, -ve => tenant owes
   editSettleTid=tid;
   document.getElementById('settle-body').innerHTML=`
